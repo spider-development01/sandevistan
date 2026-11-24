@@ -6,14 +6,14 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <title>SANDEVISTAN // Cyber After-Trail Vision</title>
+  <title>SANDEVISTAN // Real-Time After-Trail</title>
   <style>
     :root {
-      --cyber-cyan: #2cf6ff;
-      --cyber-yellow: #fcee0a;
-      --cyber-pink: #ff2a85;
-      --panel-bg: rgba(9, 12, 18, 0.86);
-      --panel-border: rgba(44, 246, 255, 0.38);
+      --accent-cyan: #2cf6ff;
+      --accent-yellow: #fcee0a;
+      --accent-pink: #ff2a85;
+      --panel-bg: rgba(10, 13, 19, 0.88);
+      --panel-border: rgba(44, 246, 255, 0.34);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-top: env(safe-area-inset-top, 0px);
     }
@@ -31,9 +31,9 @@
       height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none;
-      background: #070a0f;
+      background: #080a0f;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      color: #e9f6ff;
+      color: #eef6fc;
       user-select: none;
     }
 
@@ -50,7 +50,7 @@
       display: none;
     }
 
-    /* Top Status Pill */
+    /* Top Status Bar */
     .hud-top {
       position: fixed;
       top: calc(12px + var(--safe-top));
@@ -69,35 +69,34 @@
       align-items: center;
       gap: 8px;
       padding: 6px 12px;
-      background: rgba(8, 12, 18, 0.74);
-      border: 1px solid rgba(44, 246, 255, 0.4);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+      background: rgba(10, 13, 19, 0.72);
+      border: 1px solid rgba(44, 246, 255, 0.35);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 6px;
       font-size: 11px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #d6f7ff;
-      pointer-events: auto;
+      color: #d9f3ff;
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--cyber-yellow);
-      box-shadow: 0 0 8px var(--cyber-yellow);
+      background: var(--accent-yellow);
+      box-shadow: 0 0 8px var(--accent-yellow);
       flex-shrink: 0;
     }
 
     .status-dot.live {
-      background: var(--cyber-cyan);
-      box-shadow: 0 0 10px var(--cyber-cyan);
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
     }
 
     .status-dot.error {
-      background: var(--cyber-pink);
-      box-shadow: 0 0 10px var(--cyber-pink);
+      background: var(--accent-pink);
+      box-shadow: 0 0 10px var(--accent-pink);
     }
 
     /* Bottom-Left Refresh Button */
@@ -110,26 +109,25 @@
       align-items: center;
       gap: 8px;
       padding: 12px 18px;
-      border: 1px solid var(--cyber-yellow);
-      background: rgba(12, 16, 22, 0.86);
-      color: var(--cyber-yellow);
+      border: 1px solid var(--accent-yellow);
+      border-radius: 8px;
+      background: rgba(12, 15, 22, 0.86);
+      color: var(--accent-yellow);
       font-family: inherit;
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       cursor: pointer;
       touch-action: manipulation;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
-      box-shadow: 0 0 18px rgba(252, 238, 10, 0.22);
-      transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      transition: transform 0.12s ease, background 0.15s ease;
     }
 
     .refresh-btn:hover {
-      background: rgba(252, 238, 10, 0.16);
-      box-shadow: 0 0 24px rgba(252, 238, 10, 0.42);
+      background: rgba(252, 238, 10, 0.14);
     }
 
     .refresh-btn:active {
@@ -156,20 +154,20 @@
       align-items: center;
       gap: 8px;
       padding: 12px 16px;
-      border: 1px solid var(--cyber-cyan);
-      background: rgba(10, 16, 22, 0.88);
-      color: var(--cyber-cyan);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      background: rgba(12, 15, 22, 0.86);
+      color: var(--accent-cyan);
       font-family: inherit;
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
       cursor: pointer;
       touch-action: manipulation;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
-      box-shadow: 0 0 18px rgba(44, 246, 255, 0.24);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
       transition: transform 0.12s ease, background 0.15s ease;
     }
 
@@ -178,11 +176,11 @@
     }
 
     .settings-toggle.active {
-      background: rgba(44, 246, 255, 0.2);
+      background: rgba(44, 246, 255, 0.18);
       color: #ffffff;
     }
 
-    /* Bottom-Right Settings Menu Panel */
+    /* Bottom-Right Settings Menu */
     .settings-panel {
       position: fixed;
       right: 16px;
@@ -194,15 +192,15 @@
       overscroll-behavior: contain;
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      border-radius: 10px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
       padding: 14px 16px 16px;
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(44, 246, 255, 0.16);
-      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.65);
       opacity: 0;
-      transform: translateY(14px) scale(0.97);
+      transform: translateY(12px) scale(0.97);
       pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
+      transition: opacity 0.18s ease, transform 0.18s ease;
     }
 
     .settings-panel.open {
@@ -216,7 +214,7 @@
     }
 
     .settings-panel::-webkit-scrollbar-thumb {
-      background: rgba(44, 246, 255, 0.45);
+      background: rgba(44, 246, 255, 0.4);
       border-radius: 3px;
     }
 
@@ -224,7 +222,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(44, 246, 255, 0.22);
+      border-bottom: 1px solid rgba(44, 246, 255, 0.2);
       padding-bottom: 10px;
       margin-bottom: 12px;
     }
@@ -232,14 +230,15 @@
     .panel-title {
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.12em;
-      color: var(--cyber-cyan);
+      letter-spacing: 0.1em;
+      color: var(--accent-cyan);
       text-transform: uppercase;
     }
 
     .panel-close {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
       color: #d8f8ff;
       width: 28px;
       height: 28px;
@@ -258,14 +257,14 @@
       justify-content: space-between;
       align-items: center;
       font-size: 11px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
       color: #cfe4f2;
       margin-bottom: 5px;
       text-transform: uppercase;
     }
 
     .control-val {
-      color: var(--cyber-yellow);
+      color: var(--accent-yellow);
       font-weight: 700;
     }
 
@@ -291,10 +290,10 @@
       width: 18px;
       height: 18px;
       margin-top: -6.5px;
-      background: var(--cyber-cyan);
+      background: var(--accent-cyan);
       border: 2px solid #091318;
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--cyber-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
     }
 
     input[type="range"]::-moz-range-track {
@@ -306,18 +305,19 @@
     input[type="range"]::-moz-range-thumb {
       width: 18px;
       height: 18px;
-      background: var(--cyber-cyan);
+      background: var(--accent-cyan);
       border: 2px solid #091318;
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--cyber-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
     }
 
     select {
       width: 100%;
       padding: 8px 10px;
-      background: rgba(6, 12, 16, 0.92);
-      border: 1px solid rgba(44, 246, 255, 0.35);
-      color: #e9f6ff;
+      background: rgba(8, 12, 18, 0.94);
+      border: 1px solid rgba(44, 246, 255, 0.32);
+      border-radius: 6px;
+      color: #eef6fc;
       font-family: inherit;
       font-size: 12px;
       outline: none;
@@ -329,7 +329,7 @@
       align-items: center;
       padding: 6px 0;
       font-size: 11px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       color: #cfe4f2;
     }
@@ -351,7 +351,7 @@
       position: absolute;
       inset: 0;
       background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: 99px;
       transition: 0.2s;
       cursor: pointer;
@@ -370,27 +370,28 @@
     }
 
     .switch input:checked + .slider-switch {
-      background: rgba(44, 246, 255, 0.28);
-      border-color: var(--cyber-cyan);
+      background: rgba(44, 246, 255, 0.26);
+      border-color: var(--accent-cyan);
     }
 
     .switch input:checked + .slider-switch::before {
       transform: translateX(20px);
-      background: var(--cyber-cyan);
-      box-shadow: 0 0 8px var(--cyber-cyan);
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
     }
 
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
     .mini-btn {
-      padding: 8px 10px;
+      padding: 9px 10px;
       background: rgba(44, 246, 255, 0.1);
-      border: 1px solid rgba(44, 246, 255, 0.35);
+      border: 1px solid rgba(44, 246, 255, 0.34);
+      border-radius: 6px;
       color: #d6fbff;
       font-family: inherit;
       font-size: 11px;
@@ -405,7 +406,7 @@
       transform: scale(0.97);
     }
 
-    /* Camera Permission / Startup Overlay */
+    /* Startup / Permission Overlay */
     .startup-overlay {
       position: fixed;
       inset: 0;
@@ -414,10 +415,10 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: radial-gradient(circle at 35% 30%, rgba(44, 246, 255, 0.14), rgba(6, 9, 14, 0.94));
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      transition: opacity 0.25s ease;
+      background: radial-gradient(circle at 35% 30%, rgba(44, 246, 255, 0.12), rgba(7, 9, 14, 0.94));
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: opacity 0.22s ease;
     }
 
     .startup-overlay.hidden {
@@ -426,20 +427,20 @@
     }
 
     .startup-card {
-      width: min(410px, 100%);
-      background: rgba(9, 13, 19, 0.94);
-      border: 1px solid var(--cyber-cyan);
-      padding: 22px 20px;
-      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
-      box-shadow: 0 0 36px rgba(44, 246, 255, 0.2);
+      width: min(400px, 100%);
+      background: rgba(11, 14, 21, 0.94);
+      border: 1px solid rgba(44, 246, 255, 0.45);
+      border-radius: 12px;
+      padding: 24px 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
       text-align: center;
     }
 
     .startup-card h1 {
       margin: 0 0 8px;
       font-size: 18px;
-      letter-spacing: 0.1em;
-      color: var(--cyber-yellow);
+      letter-spacing: 0.08em;
+      color: var(--accent-yellow);
       text-transform: uppercase;
     }
 
@@ -447,7 +448,7 @@
       margin: 0 0 18px;
       font-size: 12px;
       line-height: 1.55;
-      color: #c3dceb;
+      color: #c5d9e8;
     }
 
     .startup-actions {
@@ -458,47 +459,47 @@
 
     .primary-cta {
       padding: 13px 16px;
-      background: var(--cyber-cyan);
+      background: var(--accent-cyan);
       color: #031018;
       border: none;
+      border-radius: 8px;
       font-family: inherit;
       font-size: 13px;
       font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-    }
-
-    .secondary-cta {
-      padding: 10px 14px;
-      background: transparent;
-      color: var(--cyber-yellow);
-      border: 1px solid rgba(252, 238, 10, 0.5);
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 700;
       letter-spacing: 0.07em;
       text-transform: uppercase;
       cursor: pointer;
     }
 
-    /* Flash feedback on Like Everything refresh */
+    .secondary-cta {
+      padding: 11px 14px;
+      background: transparent;
+      color: var(--accent-yellow);
+      border: 1px solid rgba(252, 238, 10, 0.45);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
     .flash-ring {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 15;
-      border: 3px solid var(--cyber-yellow);
+      border: 3px solid var(--accent-yellow);
       opacity: 0;
     }
 
     .flash-ring.active {
-      animation: pulseFlash 0.38s ease-out forwards;
+      animation: pulseFlash 0.35s ease-out forwards;
     }
 
     @keyframes pulseFlash {
-      0% { opacity: 0.85; box-shadow: inset 0 0 40px rgba(252, 238, 10, 0.45); }
+      0% { opacity: 0.8; box-shadow: inset 0 0 36px rgba(252, 238, 10, 0.35); }
       100% { opacity: 0; box-shadow: inset 0 0 0 rgba(252, 238, 10, 0); }
     }
   </style>
@@ -512,7 +513,7 @@
   <div class="hud-top">
     <div class="status-badge">
       <span id="statusDot" class="status-dot"></span>
-      <span id="statusText">INITIALIZING OPTICS...</span>
+      <span id="statusText">INITIALIZING...</span>
     </div>
     <div class="status-badge" id="fpsBadge">-- FPS</div>
   </div>
@@ -530,7 +531,7 @@
   </button>
 
   <!-- Bottom-Right Settings Menu -->
-  <aside id="settingsPanel" class="settings-panel" aria-label="Cyberpunk Trail Settings">
+  <aside id="settingsPanel" class="settings-panel" aria-label="Trail Settings">
     <div class="panel-header">
       <span class="panel-title">Sandevistan // Config</span>
       <button id="closeSettingsBtn" class="panel-close" aria-label="Close Settings">✕</button>
@@ -539,25 +540,25 @@
     <div class="control-group">
       <div class="control-label">
         <span>Trail Clones</span>
-        <span class="control-val" id="valClones">28</span>
+        <span class="control-val" id="valClones">24</span>
       </div>
-      <input type="range" id="optClones" min="4" max="42" step="1" value="28" />
+      <input type="range" id="optClones" min="4" max="42" step="1" value="24" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Capture Spacing</span>
-        <span class="control-val" id="valInterval">40 ms</span>
+        <span class="control-val" id="valInterval">38 ms</span>
       </div>
-      <input type="range" id="optInterval" min="16" max="150" step="2" value="40" />
+      <input type="range" id="optInterval" min="16" max="150" step="2" value="38" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Trail Persistence</span>
-        <span class="control-val" id="valDecay">1.6 s</span>
+        <span class="control-val" id="valDecay">1.5 s</span>
       </div>
-      <input type="range" id="optDecay" min="0.4" max="6.0" step="0.1" value="1.6" />
+      <input type="range" id="optDecay" min="0.4" max="6.0" step="0.1" value="1.5" />
     </div>
 
     <div class="toggle-row">
@@ -571,9 +572,9 @@
     <div class="control-group" style="margin-top: 8px;">
       <div class="control-label">
         <span>Motion Threshold</span>
-        <span class="control-val" id="valMotion">15%</span>
+        <span class="control-val" id="valMotion">12%</span>
       </div>
-      <input type="range" id="optMotion" min="0" max="80" step="1" value="15" />
+      <input type="range" id="optMotion" min="0" max="80" step="1" value="12" />
     </div>
 
     <div class="control-group">
@@ -581,39 +582,47 @@
         <span>Color Spectrum</span>
       </div>
       <select id="optPalette">
-        <option value="0" selected>Sandevistan (Orange → Violet → Cyan)</option>
-        <option value="1">Ghost in the Shell (Cyber Cyan → Indigo)</option>
-        <option value="2">Edgerunner Neon (Yellow → Pink → Cyan)</option>
-        <option value="3">Thermal Ghost (Crimson → Amber → White)</option>
+        <option value="0" selected>Cyberprism (Green → Yellow → Coral → Blue)</option>
+        <option value="1">Sandevistan Classic (Amber → Crimson → Violet → Cyan)</option>
+        <option value="2">Edgerunners (Cyan → Mint → Emerald)</option>
+        <option value="3">Ghost in the Shell (Ice Cyan → Electric Blue → Violet)</option>
       </select>
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Background Mode</span>
+        <span>Background Style</span>
       </div>
       <select id="optBgMode">
         <option value="0" selected>Natural Live Background</option>
         <option value="1">Dimmed Live Background</option>
         <option value="2">Cyber Noir (Desaturated)</option>
-        <option value="3">Pitch Black Void</option>
+        <option value="3">Pitch Black Studio</option>
       </select>
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Person Mask Sensitivity</span>
-        <span class="control-val" id="valThresh">0.52</span>
+        <span>Clone Opacity</span>
+        <span class="control-val" id="valOpacity">90%</span>
       </div>
-      <input type="range" id="optThresh" min="0.20" max="0.85" step="0.02" value="0.52" />
+      <input type="range" id="optOpacity" min="30" max="100" step="2" value="90" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Anime Outline & Contrast</span>
-        <span class="control-val" id="valOutline">85%</span>
+        <span>Mask Cutoff</span>
+        <span class="control-val" id="valThresh">0.55</span>
       </div>
-      <input type="range" id="optOutline" min="0" max="100" step="5" value="85" />
+      <input type="range" id="optThresh" min="0.25" max="0.85" step="0.02" value="0.55" />
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Edge Feather Smoothness</span>
+        <span class="control-val" id="valSmooth">1.2</span>
+      </div>
+      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.2" />
     </div>
 
     <div class="toggle-row">
@@ -625,7 +634,7 @@
     </div>
 
     <div class="toggle-row">
-      <span>Eco Mobile Mode (Faster FPS)</span>
+      <span>Eco Mobile Mode</span>
       <label class="switch">
         <input type="checkbox" id="optEco" />
         <span class="slider-switch"></span>
@@ -643,7 +652,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Enable your camera to track your body movements in real time and duplicate your silhouette into chromatic cyber after-trails.
+        Allow camera access to track your body movements in real time and render smooth chromatic after-trail clones over your live feed.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -656,24 +665,25 @@
     import {
       FilesetResolver,
       ImageSegmenter
-    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs";
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/vision_bundle.mjs";
 
     // =========================================================================
-    // 1. State & Settings
+    // 1. State
     // =========================================================================
     const isLikelyMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
     const state = {
       maxSlots: 42,
-      clones: 28,
-      intervalMs: 40,
-      decaySec: 1.6,
+      clones: 24,
+      intervalMs: 38,
+      decaySec: 1.5,
       infinite: false,
-      motionPct: 15,
+      motionPct: 12,
       palette: 0,
-      bgMode: 0, // 0 = Natural live camera background
-      threshold: 0.52,
-      outline: 0.85,
+      bgMode: 0,
+      cloneOpacity: 0.90,
+      threshold: 0.55,
+      smoothRadius: 1.2,
       mirror: true,
       eco: isLikelyMobile,
       facingMode: "user",
@@ -686,6 +696,8 @@
       ringHead: 0,
       prevMaskSample: null,
       motionLevel: 1.0,
+      hasMaskHistory: false,
+      histWriteIdx: 0,
       fpsFrames: 0,
       fpsLastTime: performance.now()
     };
@@ -717,8 +729,9 @@
     const optMotion = document.getElementById("optMotion");
     const optPalette = document.getElementById("optPalette");
     const optBgMode = document.getElementById("optBgMode");
+    const optOpacity = document.getElementById("optOpacity");
     const optThresh = document.getElementById("optThresh");
-    const optOutline = document.getElementById("optOutline");
+    const optSmooth = document.getElementById("optSmooth");
     const optMirror = document.getElementById("optMirror");
     const optEco = document.getElementById("optEco");
     const switchCamBtn = document.getElementById("switchCamBtn");
@@ -727,11 +740,13 @@
     optEco.checked = state.eco;
 
     // =========================================================================
-    // 3. WebGL2 Setup & Shaders
+    // 3. WebGL2 Initialization & Shaders
     // =========================================================================
     const gl = canvas.getContext("webgl2", {
       alpha: false,
       antialias: false,
+      depth: false,
+      stencil: false,
       powerPreference: "high-performance"
     });
 
@@ -752,7 +767,60 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Real camera background shader (Natural / Dimmed / Cyber Noir / Black Void)
+    // Mask Pass 1: Velocity-adaptive temporal stabilization
+    const FS_MASK_TEMPORAL = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uCurrMask;
+    uniform sampler2D uPrevMask;
+    uniform float uHasHistory;
+
+    void main() {
+      float curr = texture(uCurrMask, vUv).r;
+      if (uHasHistory < 0.5) {
+        fragColor = vec4(curr, curr, curr, 1.0);
+        return;
+      }
+      float prev = texture(uPrevMask, vUv).r;
+      float diff = abs(curr - prev);
+      // Heavy jitter suppression on static edges, instant tracking on fast motion
+      float alpha = mix(0.28, 0.96, smoothstep(0.05, 0.25, diff));
+      float stabilized = mix(prev, curr, alpha);
+      fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
+    }`;
+
+    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + final clean feathering
+    const FS_MASK_BLUR = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uMaskIn;
+    uniform vec2 uStep;
+    uniform float uFinalPass;
+    uniform float uThresh;
+
+    void main() {
+      float sum = texture(uMaskIn, vUv).r * 0.2270270;
+      sum += texture(uMaskIn, vUv + uStep * 1.0).r * 0.1945946;
+      sum += texture(uMaskIn, vUv - uStep * 1.0).r * 0.1945946;
+      sum += texture(uMaskIn, vUv + uStep * 2.0).r * 0.1216216;
+      sum += texture(uMaskIn, vUv - uStep * 2.0).r * 0.1216216;
+      sum += texture(uMaskIn, vUv + uStep * 3.0).r * 0.0540541;
+      sum += texture(uMaskIn, vUv - uStep * 3.0).r * 0.0540541;
+      sum += texture(uMaskIn, vUv + uStep * 4.0).r * 0.0162162;
+      sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
+
+      if (uFinalPass > 0.5) {
+        float feather = 0.13;
+        sum = smoothstep(uThresh - feather, uThresh + feather, sum);
+      }
+      fragColor = vec4(sum, sum, sum, 1.0);
+    }`;
+
+    // Background shader: Natural live feed / Dimmed / Noir / Black
     const FS_BG = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -781,24 +849,21 @@
       vec3 vid = texture(uVideoTex, uv).rgb;
 
       if (uBgMode == 1) {
-        // Dimmed real feed so trails stand out cleanly
         fragColor = vec4(vid * 0.48, 1.0);
         return;
       }
 
       if (uBgMode == 2) {
-        // Cyber Noir: desaturated, cool-tinted dark real feed
         float lum = dot(vid, vec3(0.299, 0.587, 0.114));
-        vec3 noir = mix(vec3(0.02, 0.04, 0.07), vec3(0.14, 0.22, 0.28), lum);
+        vec3 noir = mix(vec3(0.02, 0.04, 0.07), vec3(0.16, 0.23, 0.30), lum);
         fragColor = vec4(noir, 1.0);
         return;
       }
 
-      // Mode 0: Natural real live background
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: extracts segmented person cleanly into FBO or live foreground
+    // Cutout shader: Pure premultiplied alpha person extraction (zero outlines/artifacts)
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -807,20 +872,7 @@
     uniform sampler2D uVideoTex;
     uniform sampler2D uMaskTex;
     uniform vec2 uUvScale;
-    uniform vec2 uMaskTexel;
     uniform float uMirror;
-    uniform float uThresh;
-    uniform float uOutline;
-    uniform float uIsLive;
-
-    float sampleMask(vec2 uv) {
-      float m = texture(uMaskTex, uv).r * 0.40;
-      m += texture(uMaskTex, uv + vec2( uMaskTexel.x, 0.0)).r * 0.15;
-      m += texture(uMaskTex, uv + vec2(-uMaskTexel.x, 0.0)).r * 0.15;
-      m += texture(uMaskTex, uv + vec2(0.0,  uMaskTexel.y)).r * 0.15;
-      m += texture(uMaskTex, uv + vec2(0.0, -uMaskTexel.y)).r * 0.15;
-      return m;
-    }
 
     void main() {
       vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
@@ -831,49 +883,51 @@
         return;
       }
 
-      float m = sampleMask(uv);
-      float feather = 0.09;
-      float alpha = smoothstep(uThresh - feather, uThresh + feather, m);
-      if (alpha < 0.01) {
+      float alpha = texture(uMaskTex, uv).r;
+      if (alpha < 0.015) {
         fragColor = vec4(0.0);
         return;
       }
 
       vec3 rgb = texture(uVideoTex, uv).rgb;
-
-      if (uIsLive > 0.5) {
-        // Subtle vibrancy & crisp anime rim on the active foreground person
-        float lum = dot(rgb, vec3(0.299, 0.587, 0.114));
-        rgb = mix(vec3(lum), rgb, 1.18);
-        rgb = clamp((rgb - 0.5) * 1.08 + 0.5, 0.0, 1.0);
-
-        float edge = smoothstep(0.05, 0.48, alpha) * (1.0 - smoothstep(0.62, 0.96, alpha));
-        rgb = mix(rgb, vec3(0.04, 0.05, 0.06), edge * uOutline * 0.75);
-      }
-
-      fragColor = vec4(rgb, alpha);
+      // Premultiplied alpha output eliminates dark edge halos under bilinear filtering
+      fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone spectrum shader: Sandevistan duotone shading + anime outline
+    // Clone spectrum shader: Smooth luminance-preserving photographic tinting
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
     out vec4 fragColor;
 
     uniform sampler2D uCloneTex;
-    uniform vec2 uTexel;
     uniform float uAge;
     uniform float uAlpha;
-    uniform float uOutline;
     uniform int uPalette;
 
+    vec3 cyberprismPalette(float t) {
+      // Matches real-life photo trail: Emerald -> Lime -> Yellow -> Gold -> Warm Coral -> Steel Blue
+      vec3 c0 = vec3(0.28, 0.88, 0.42);
+      vec3 c1 = vec3(0.68, 0.90, 0.32);
+      vec3 c2 = vec3(0.92, 0.84, 0.36);
+      vec3 c3 = vec3(0.88, 0.64, 0.42);
+      vec3 c4 = vec3(0.82, 0.48, 0.48);
+      vec3 c5 = vec3(0.45, 0.62, 0.92);
+
+      if (t < 0.20) return mix(c0, c1, t / 0.20);
+      if (t < 0.42) return mix(c1, c2, (t - 0.20) / 0.22);
+      if (t < 0.64) return mix(c2, c3, (t - 0.42) / 0.22);
+      if (t < 0.84) return mix(c3, c4, (t - 0.64) / 0.20);
+      return mix(c4, c5, (t - 0.84) / 0.16);
+    }
+
     vec3 sandevistanPalette(float t) {
-      vec3 c0 = vec3(0.84, 0.50, 0.22);
-      vec3 c1 = vec3(0.73, 0.28, 0.22);
-      vec3 c2 = vec3(0.62, 0.18, 0.40);
-      vec3 c3 = vec3(0.35, 0.18, 0.66);
-      vec3 c4 = vec3(0.14, 0.36, 0.80);
-      vec3 c5 = vec3(0.42, 0.84, 0.80);
+      vec3 c0 = vec3(0.92, 0.56, 0.26);
+      vec3 c1 = vec3(0.82, 0.30, 0.28);
+      vec3 c2 = vec3(0.68, 0.22, 0.52);
+      vec3 c3 = vec3(0.38, 0.24, 0.78);
+      vec3 c4 = vec3(0.18, 0.48, 0.92);
+      vec3 c5 = vec3(0.42, 0.88, 0.88);
 
       if (t < 0.20) return mix(c0, c1, t / 0.20);
       if (t < 0.40) return mix(c1, c2, (t - 0.20) / 0.20);
@@ -882,68 +936,44 @@
       return mix(c4, c5, (t - 0.82) / 0.18);
     }
 
+    vec3 edgerunnersPalette(float t) {
+      vec3 c0 = vec3(0.32, 0.94, 0.92);
+      vec3 c1 = vec3(0.18, 0.86, 0.72);
+      vec3 c2 = vec3(0.16, 0.82, 0.46);
+      if (t < 0.5) return mix(c0, c1, t * 2.0);
+      return mix(c1, c2, (t - 0.5) * 2.0);
+    }
+
     vec3 gitsPalette(float t) {
-      vec3 c0 = vec3(0.20, 0.96, 0.90);
-      vec3 c1 = vec3(0.10, 0.66, 0.98);
-      vec3 c2 = vec3(0.34, 0.28, 0.92);
-      vec3 c3 = vec3(0.60, 0.20, 0.82);
-      if (t < 0.33) return mix(c0, c1, t / 0.33);
-      if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
-      return mix(c2, c3, (t - 0.66) / 0.34);
-    }
-
-    vec3 neonPalette(float t) {
-      vec3 c0 = vec3(0.99, 0.93, 0.08);
-      vec3 c1 = vec3(1.00, 0.18, 0.54);
-      vec3 c2 = vec3(0.55, 0.18, 0.96);
-      vec3 c3 = vec3(0.15, 0.92, 0.96);
-      if (t < 0.33) return mix(c0, c1, t / 0.33);
-      if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
-      return mix(c2, c3, (t - 0.66) / 0.34);
-    }
-
-    vec3 thermalPalette(float t) {
-      vec3 c0 = vec3(0.98, 0.96, 0.72);
-      vec3 c1 = vec3(0.96, 0.45, 0.12);
-      vec3 c2 = vec3(0.76, 0.10, 0.34);
-      vec3 c3 = vec3(0.24, 0.08, 0.52);
-      if (t < 0.33) return mix(c0, c1, t / 0.33);
-      if (t < 0.66) return mix(c1, c2, (t - 0.33) / 0.33);
-      return mix(c2, c3, (t - 0.66) / 0.34);
+      vec3 c0 = vec3(0.28, 0.95, 0.94);
+      vec3 c1 = vec3(0.18, 0.62, 0.98);
+      vec3 c2 = vec3(0.46, 0.30, 0.92);
+      if (t < 0.5) return mix(c0, c1, t * 2.0);
+      return mix(c1, c2, (t - 0.5) * 2.0);
     }
 
     void main() {
       vec4 tex = texture(uCloneTex, vUv);
       float a = tex.a;
-      if (a < 0.02) discard;
+      if (a < 0.015) discard;
 
-      float lum = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
-      float contrast = 1.15 + uOutline * 0.45;
-      lum = clamp((lum - 0.48) * contrast + 0.5, 0.0, 1.0);
+      // Safely un-premultiply color so edges never darken
+      vec3 rawRgb = clamp(tex.rgb / max(a, 0.001), 0.0, 1.0);
+      float lum = dot(rawRgb, vec3(0.299, 0.587, 0.114));
 
       vec3 tint;
-      if (uPalette == 1) tint = gitsPalette(uAge);
-      else if (uPalette == 2) tint = neonPalette(uAge);
-      else if (uPalette == 3) tint = thermalPalette(uAge);
-      else tint = sandevistanPalette(uAge);
+      if (uPalette == 1) tint = sandevistanPalette(uAge);
+      else if (uPalette == 2) tint = edgerunnersPalette(uAge);
+      else if (uPalette == 3) tint = gitsPalette(uAge);
+      else tint = cyberprismPalette(uAge);
 
-      vec3 shadowTone = tint * vec3(0.24, 0.19, 0.28);
-      vec3 highlightTone = mix(tint, vec3(0.86, 0.96, 1.0), 0.52);
+      // Smooth photographic colorize preserving natural shadows, folds, and speculars
+      vec3 colorized = tint * (0.14 + 1.02 * lum);
+      vec3 highlightLift = mix(colorized, vec3(1.0), pow(lum, 2.6) * 0.22);
+      vec3 finalCol = clamp(mix(highlightLift, rawRgb * tint * 1.35, 0.12), 0.0, 1.0);
 
-      vec3 shaded = lum < 0.5
-        ? mix(shadowTone, tint, lum * 2.0)
-        : mix(tint, highlightTone, (lum - 0.5) * 2.0);
-
-      float n1 = texture(uCloneTex, vUv + vec2( uTexel.x, 0.0)).a;
-      float n2 = texture(uCloneTex, vUv + vec2(-uTexel.x, 0.0)).a;
-      float n3 = texture(uCloneTex, vUv + vec2(0.0,  uTexel.y)).a;
-      float n4 = texture(uCloneTex, vUv + vec2(0.0, -uTexel.y)).a;
-      float minNeighbor = min(min(n1, n2), min(n3, n4));
-      float rim = clamp((a - minNeighbor) * 2.4, 0.0, 1.0);
-
-      shaded = mix(shaded, tint * 0.15, rim * uOutline * 0.85);
-
-      fragColor = vec4(shaded, a * uAlpha);
+      float outAlpha = a * uAlpha;
+      fragColor = vec4(finalCol * outAlpha, outAlpha);
     }`;
 
     function compileShader(type, src) {
@@ -956,7 +986,7 @@
       return sh;
     }
 
-    function createProgram(vsSrc, fsSrc) {
+    function createProgram(vsSrc, fsSrc, uniformNames) {
       const prog = gl.createProgram();
       gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSrc));
       gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSrc));
@@ -964,12 +994,28 @@
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
         throw new Error(gl.getProgramInfoLog(prog));
       }
-      return prog;
+      const uniforms = {};
+      for (const name of uniformNames) {
+        uniforms[name] = gl.getUniformLocation(prog, name);
+      }
+      return { prog, u: uniforms };
     }
 
-    const progBg = createProgram(VS_QUAD, FS_BG);
-    const progCutout = createProgram(VS_QUAD, FS_CUTOUT);
-    const progClone = createProgram(VS_QUAD, FS_CLONE);
+    const pMaskTemporal = createProgram(VS_QUAD, FS_MASK_TEMPORAL, [
+      "uCurrMask", "uPrevMask", "uHasHistory"
+    ]);
+    const pMaskBlur = createProgram(VS_QUAD, FS_MASK_BLUR, [
+      "uMaskIn", "uStep", "uFinalPass", "uThresh"
+    ]);
+    const pBg = createProgram(VS_QUAD, FS_BG, [
+      "uVideoTex", "uUvScale", "uMirror", "uBgMode", "uHasSource"
+    ]);
+    const pCutout = createProgram(VS_QUAD, FS_CUTOUT, [
+      "uVideoTex", "uMaskTex", "uUvScale", "uMirror"
+    ]);
+    const pClone = createProgram(VS_QUAD, FS_CLONE, [
+      "uCloneTex", "uAge", "uAlpha", "uPalette"
+    ]);
 
     const quadVao = gl.createVertexArray();
     gl.bindVertexArray(quadVao);
@@ -990,24 +1036,67 @@
       return t;
     }
 
+    function createFbo(w, h) {
+      const tex = createLinearTex();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      const fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        console.warn("Framebuffer incomplete:", w, h);
+      }
+      return { fbo, tex };
+    }
+
+    function destroyFbo(item) {
+      if (!item) return;
+      gl.deleteFramebuffer(item.fbo);
+      gl.deleteTexture(item.tex);
+    }
+
     const videoTex = createLinearTex();
-    const maskTex = createLinearTex();
+    const maskRawTex = createLinearTex();
 
     // =========================================================================
-    // 4. Trail FBO Ring Buffer & Sizing
+    // 4. FBO Pools (Mask Refinement + Trail Ring Buffer)
     // =========================================================================
     let trailW = 640;
     let trailH = 360;
+    let maskFboW = 384;
+    let maskFboH = 216;
     const fboPool = [];
+    let maskHist = [null, null];
+    let maskBlurTemp = null;
+    let maskFinal = null;
 
-    function rebuildFboPool() {
-      for (const item of fboPool) {
-        gl.deleteFramebuffer(item.fbo);
-        gl.deleteTexture(item.tex);
+    function rebuildMaskFbos(srcW = 640, srcH = 480) {
+      maskHist.forEach(destroyFbo);
+      destroyFbo(maskBlurTemp);
+      destroyFbo(maskFinal);
+
+      const maxMaskDim = state.eco ? 256 : 384;
+      const aspect = srcW / Math.max(1, srcH);
+      if (aspect >= 1) {
+        maskFboW = maxMaskDim;
+        maskFboH = Math.max(96, Math.round(maxMaskDim / aspect));
+      } else {
+        maskFboH = maxMaskDim;
+        maskFboW = Math.max(96, Math.round(maxMaskDim * aspect));
       }
+
+      maskHist = [createFbo(maskFboW, maskFboH), createFbo(maskFboW, maskFboH)];
+      maskBlurTemp = createFbo(maskFboW, maskFboH);
+      maskFinal = createFbo(maskFboW, maskFboH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      state.hasMaskHistory = false;
+    }
+
+    function rebuildTrailPool() {
+      fboPool.forEach(destroyFbo);
       fboPool.length = 0;
 
-      const maxDim = state.eco ? 480 : (isLikelyMobile ? 640 : 860);
+      const maxDim = state.eco ? 520 : (isLikelyMobile ? 680 : 920);
       const aspect = canvas.width / Math.max(1, canvas.height);
       if (aspect >= 1) {
         trailW = maxDim;
@@ -1018,15 +1107,10 @@
       }
 
       for (let i = 0; i < state.maxSlots; i++) {
-        const tex = createLinearTex();
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, trailW, trailH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-        const fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-
-        fboPool.push({ fbo, tex, active: false, timestamp: 0 });
+        const item = createFbo(trailW, trailH);
+        item.active = false;
+        item.timestamp = 0;
+        fboPool.push(item);
       }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1058,11 +1142,13 @@
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
-        rebuildFboPool();
+        rebuildTrailPool();
       }
     }
 
     window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 120));
+    rebuildMaskFbos(640, 480);
     resizeCanvas();
 
     // =========================================================================
@@ -1073,6 +1159,7 @@
     let maskBytes = null;
     let maskW = 0;
     let maskH = 0;
+    let lastMaskSrcAspect = 0;
 
     const demoCanvas = document.createElement("canvas");
     demoCanvas.width = 640;
@@ -1083,20 +1170,17 @@
       const w = demoCanvas.width;
       const h = demoCanvas.height;
 
-      // Dark cyberpunk night alley backdrop
       const grad = demoCtx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, "#0b101b");
-      grad.addColorStop(1, "#182233");
+      grad.addColorStop(0, "#101521");
+      grad.addColorStop(1, "#1c2536");
       demoCtx.fillStyle = grad;
       demoCtx.fillRect(0, 0, w, h);
 
-      // Subtle horizon & perspective grid lines
       demoCtx.strokeStyle = "rgba(44, 246, 255, 0.14)";
       demoCtx.lineWidth = 1;
-      const horizonY = h * 0.86;
       demoCtx.beginPath();
-      demoCtx.moveTo(0, horizonY);
-      demoCtx.lineTo(w, horizonY);
+      demoCtx.moveTo(0, h * 0.86);
+      demoCtx.lineTo(w, h * 0.86);
       demoCtx.stroke();
 
       const cycle = (tSec * 0.42) % 1.0;
@@ -1111,7 +1195,7 @@
       demoCtx.scale(dir, 1);
 
       demoCtx.lineCap = "round";
-      demoCtx.strokeStyle = "#1f242c";
+      demoCtx.strokeStyle = "#222831";
       demoCtx.lineWidth = 22;
       demoCtx.beginPath();
       demoCtx.moveTo(-4, -105);
@@ -1119,40 +1203,32 @@
       demoCtx.lineTo(-26 + stride * 55, 0);
       demoCtx.stroke();
 
-      demoCtx.strokeStyle = "#2b323d";
+      demoCtx.strokeStyle = "#2e3642";
       demoCtx.beginPath();
       demoCtx.moveTo(6, -105);
       demoCtx.lineTo(14 - stride * 42, -52);
       demoCtx.lineTo(8 - stride * 55, 0);
       demoCtx.stroke();
 
-      demoCtx.strokeStyle = "#dfe7ef";
-      demoCtx.lineWidth = 5;
+      demoCtx.fillStyle = "#b8bec8";
       demoCtx.beginPath();
-      demoCtx.moveTo(4, -100);
-      demoCtx.lineTo(11 - stride * 38, -52);
-      demoCtx.stroke();
-
-      demoCtx.fillStyle = "#f5dc19";
-      demoCtx.beginPath();
-      demoCtx.moveTo(-22, -185);
-      demoCtx.lineTo(24, -185);
-      demoCtx.lineTo(20, -102);
-      demoCtx.lineTo(-18, -102);
+      demoCtx.moveTo(-24, -186);
+      demoCtx.lineTo(25, -186);
+      demoCtx.lineTo(21, -102);
+      demoCtx.lineTo(-19, -102);
       demoCtx.closePath();
       demoCtx.fill();
 
-      demoCtx.fillStyle = "#c9a60c";
-      demoCtx.fillRect(-16, -185, 16, 80);
-      demoCtx.fillStyle = "#fff166";
-      demoCtx.fillRect(10, -198, 12, 22);
+      demoCtx.fillStyle = "#959ca8";
+      demoCtx.fillRect(-16, -186, 16, 82);
 
-      demoCtx.strokeStyle = "#f5dc19";
+      demoCtx.strokeStyle = "#b8bec8";
       demoCtx.lineWidth = 18;
       demoCtx.beginPath();
       demoCtx.moveTo(8, -172);
       demoCtx.lineTo(20 - stride * 36, -125);
       demoCtx.stroke();
+
       demoCtx.strokeStyle = "#e0a988";
       demoCtx.lineWidth = 13;
       demoCtx.beginPath();
@@ -1165,7 +1241,7 @@
       demoCtx.arc(4, -210, 19, 0, Math.PI * 2);
       demoCtx.fill();
 
-      demoCtx.fillStyle = "#261f26";
+      demoCtx.fillStyle = "#1f2026";
       demoCtx.beginPath();
       demoCtx.moveTo(-16, -212);
       demoCtx.quadraticCurveTo(2, -242, 26, -218);
@@ -1185,7 +1261,7 @@
     async function initSegmenter() {
       statusText.textContent = "LOADING NEURAL MASK...";
       const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
       );
 
       const modelUrl =
@@ -1199,7 +1275,7 @@
           outputConfidenceMasks: true
         });
       } catch (gpuErr) {
-        console.warn("GPU delegate unavailable, falling back to CPU:", gpuErr);
+        console.warn("GPU delegate unavailable, using CPU delegate:", gpuErr);
         imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
           baseOptions: { modelAssetPath: modelUrl, delegate: "CPU" },
           runningMode: "VIDEO",
@@ -1218,13 +1294,13 @@
         statusText.textContent = "LOADING MODEL...";
       } else if (state.demoMode) {
         statusDot.className = "status-dot live";
-        statusText.textContent = "DEMO SILHOUETTE ACTIVE";
+        statusText.textContent = "DEMO MODE";
       } else if (state.cameraReady) {
         statusDot.className = "status-dot live";
-        statusText.textContent = "SANDEVISTAN ONLINE";
+        statusText.textContent = "LIVE OPTICS";
       } else {
         statusDot.className = "status-dot";
-        statusText.textContent = "AWAITING OPTICS";
+        statusText.textContent = "AWAITING CAMERA";
       }
     }
 
@@ -1241,6 +1317,8 @@
       state.cameraReady = false;
       state.demoMode = false;
       state.lastVideoTime = -1;
+      state.hasMaskHistory = false;
+      state.prevMaskSample = null;
 
       const idealW = state.eco ? 640 : 1280;
       const idealH = state.eco ? 480 : 720;
@@ -1275,6 +1353,8 @@
       state.cameraReady = false;
       state.demoMode = true;
       state.mirror = false;
+      state.hasMaskHistory = false;
+      state.prevMaskSample = null;
       optMirror.checked = false;
       startupOverlay.classList.add("hidden");
       clearAllTrails(false);
@@ -1282,10 +1362,64 @@
     }
 
     // =========================================================================
-    // 8. Segmentation & Motion Detection
+    // 8. Segmentation + GPU 3-Pass Mask Refinement
     // =========================================================================
+    function refineMaskOnGpu() {
+      gl.bindVertexArray(quadVao);
+      gl.disable(gl.BLEND);
+      gl.viewport(0, 0, maskFboW, maskFboH);
+
+      // Pass 1: Temporal stabilization
+      const writeIdx = state.histWriteIdx;
+      const readIdx = 1 - writeIdx;
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskHist[writeIdx].fbo);
+      gl.useProgram(pMaskTemporal.prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
+      gl.uniform1i(pMaskTemporal.u.uCurrMask, 0);
+
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, maskHist[readIdx].tex);
+      gl.uniform1i(pMaskTemporal.u.uPrevMask, 1);
+      gl.uniform1f(pMaskTemporal.u.uHasHistory, state.hasMaskHistory ? 1.0 : 0.0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      state.hasMaskHistory = true;
+      state.histWriteIdx = readIdx;
+
+      // Pass 2: Horizontal 9-tap Gaussian blur
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskBlurTemp.fbo);
+      gl.useProgram(pMaskBlur.prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskHist[writeIdx].tex);
+      gl.uniform1i(pMaskBlur.u.uMaskIn, 0);
+      gl.uniform2f(pMaskBlur.u.uStep, state.smoothRadius / maskFboW, 0.0);
+      gl.uniform1f(pMaskBlur.u.uFinalPass, 0.0);
+      gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // Pass 3: Vertical 9-tap Gaussian blur + final smooth edge cutoff
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
+      gl.uniform1i(pMaskBlur.u.uMaskIn, 0);
+      gl.uniform2f(pMaskBlur.u.uStep, 0.0, state.smoothRadius / maskFboH);
+      gl.uniform1f(pMaskBlur.u.uFinalPass, 1.0);
+      gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
     function runSegmentation(sourceEl, srcW, srcH, nowMs) {
       if (!imageSegmenter || !state.segmenterReady) return;
+
+      const srcAspect = srcW / Math.max(1, srcH);
+      if (Math.abs(srcAspect - lastMaskSrcAspect) > 0.02) {
+        lastMaskSrcAspect = srcAspect;
+        rebuildMaskFbos(srcW, srcH);
+      }
 
       const targetMax = state.eco ? 192 : 256;
       const scale = targetMax / Math.max(srcW, srcH);
@@ -1303,8 +1437,9 @@
       const ts = Math.max(state.lastSegTimestamp + 1, Math.floor(nowMs));
       state.lastSegTimestamp = ts;
 
-      const result = imageSegmenter.segmentForVideo(segCanvas, ts);
+      let result = null;
       try {
+        result = imageSegmenter.segmentForVideo(segCanvas, ts);
         const masks = result.confidenceMasks;
         if (!masks || masks.length === 0) return;
 
@@ -1323,7 +1458,8 @@
           maskBytes[i] = v <= 0 ? 0 : v >= 1 ? 255 : (v * 255) | 0;
         }
 
-        const stride = 24;
+        // Noise-gated motion detection
+        const stride = 20;
         const sampleCount = Math.ceil(len / stride);
         if (!state.prevMaskSample || state.prevMaskSample.length !== sampleCount) {
           state.prevMaskSample = new Float32Array(sampleCount);
@@ -1334,21 +1470,31 @@
         } else {
           let diffSum = 0;
           for (let i = 0, j = 0; i < len; i += stride, j++) {
-            diffSum += Math.abs(floats[i] - state.prevMaskSample[j]);
+            const d = Math.abs(floats[i] - state.prevMaskSample[j]);
+            if (d > 0.12) diffSum += d;
             state.prevMaskSample[j] = floats[i];
           }
-          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 14.0);
+          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 18.0);
         }
 
-        gl.bindTexture(gl.TEXTURE_2D, maskTex);
+        gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, maskW, maskH, 0, gl.RED, gl.UNSIGNED_BYTE, maskBytes);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
 
         for (let i = 0; i < masks.length; i++) {
           masks[i].close();
         }
+
+        refineMaskOnGpu();
+      } catch (err) {
+        console.warn("Segmentation frame skipped:", err);
       } finally {
-        result.close();
+        if (result) {
+          try {
+            result.close();
+          } catch {}
+        }
       }
     }
 
@@ -1386,7 +1532,13 @@
         srcW = demoCanvas.width;
         srcH = demoCanvas.height;
         hasNewFrame = true;
-      } else if (state.cameraReady && video.readyState >= 2 && video.videoWidth > 0) {
+      } else if (
+        state.cameraReady &&
+        video.readyState >= 2 &&
+        video.videoWidth > 0 &&
+        !video.paused &&
+        !video.ended
+      ) {
         sourceEl = video;
         srcW = video.videoWidth;
         srcH = video.videoHeight;
@@ -1398,6 +1550,7 @@
 
       if (sourceEl && hasNewFrame) {
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceEl);
         runSegmentation(sourceEl, srcW, srcH, nowMs);
       }
@@ -1407,12 +1560,12 @@
 
       gl.bindVertexArray(quadVao);
 
-      // Capture into ring-buffer trail FBO if interval & motion threshold met
+      // Capture into trail FBO ring buffer
       if (
         sourceEl &&
-        maskW > 0 &&
+        state.hasMaskHistory &&
         nowMs - state.lastCaptureTime >= state.intervalMs &&
-        state.motionLevel >= state.motionPct / 100
+        (state.motionPct === 0 || state.motionLevel >= state.motionPct / 100)
       ) {
         state.lastCaptureTime = nowMs;
         const slot = fboPool[state.ringHead];
@@ -1426,22 +1579,17 @@
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        gl.useProgram(progCutout);
+        gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
-        gl.uniform1i(gl.getUniformLocation(progCutout, "uVideoTex"), 0);
+        gl.uniform1i(pCutout.u.uVideoTex, 0);
 
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, maskTex);
-        gl.uniform1i(gl.getUniformLocation(progCutout, "uMaskTex"), 1);
+        gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
+        gl.uniform1i(pCutout.u.uMaskTex, 1);
 
-        gl.uniform2f(gl.getUniformLocation(progCutout, "uUvScale"), uvScaleX, uvScaleY);
-        gl.uniform2f(gl.getUniformLocation(progCutout, "uMaskTexel"), 1 / maskW, 1 / maskH);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uMirror"), mirrorFlag);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uThresh"), state.threshold);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uOutline"), state.outline);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uIsLive"), 0.0);
-
+        gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
+        gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1450,33 +1598,25 @@
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.disable(gl.BLEND);
 
-      // 1) Render Real Background (no green screen)
-      gl.useProgram(progBg);
+      // 1) Real Camera Background
+      gl.useProgram(pBg.prog);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, videoTex);
-      gl.uniform1i(gl.getUniformLocation(progBg, "uVideoTex"), 0);
-      gl.uniform2f(gl.getUniformLocation(progBg, "uUvScale"), uvScaleX, uvScaleY);
-      gl.uniform1f(gl.getUniformLocation(progBg, "uMirror"), mirrorFlag);
-      gl.uniform1i(gl.getUniformLocation(progBg, "uBgMode"), state.bgMode);
-      gl.uniform1f(gl.getUniformLocation(progBg, "uHasSource"), sourceEl ? 1.0 : 0.0);
+      gl.uniform1i(pBg.u.uVideoTex, 0);
+      gl.uniform2f(pBg.u.uUvScale, uvScaleX, uvScaleY);
+      gl.uniform1f(pBg.u.uMirror, mirrorFlag);
+      gl.uniform1i(pBg.u.uBgMode, state.bgMode);
+      gl.uniform1f(pBg.u.uHasSource, sourceEl ? 1.0 : 0.0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      if (sourceEl && maskW > 0) {
+      if (sourceEl && state.hasMaskHistory) {
+        // Premultiplied alpha blending (ZERO dark edges/halos)
         gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Draw Trail Clones Oldest -> Newest
-        gl.useProgram(progClone);
-        const locCloneTex = gl.getUniformLocation(progClone, "uCloneTex");
-        const locTexel = gl.getUniformLocation(progClone, "uTexel");
-        const locAge = gl.getUniformLocation(progClone, "uAge");
-        const locAlpha = gl.getUniformLocation(progClone, "uAlpha");
-        const locOutline = gl.getUniformLocation(progClone, "uOutline");
-        const locPalette = gl.getUniformLocation(progClone, "uPalette");
-
-        gl.uniform2f(locTexel, 1 / trailW, 1 / trailH);
-        gl.uniform1f(locOutline, state.outline);
-        gl.uniform1i(locPalette, state.palette);
+        // 2) Render Clones Oldest -> Newest
+        gl.useProgram(pClone.prog);
+        gl.uniform1i(pClone.u.uPalette, state.palette);
 
         const count = state.clones;
         const decayMs = state.decaySec * 1000;
@@ -1493,38 +1633,34 @@
               slot.active = false;
               continue;
             }
-            timeFade = 1.0 - Math.pow(elapsed / decayMs, 1.8);
+            // Hold strong visibility through most of the trail, fade gently at the tail
+            const progress = elapsed / decayMs;
+            timeFade = 1.0 - Math.pow(progress, 2.4);
           }
 
           const ageNorm = (k - 1) / Math.max(1, count - 1);
-          const slotFade = 0.94 - ageNorm * 0.42;
+          const alpha = Math.max(0.0, timeFade * state.cloneOpacity * (1.0 - ageNorm * 0.28));
 
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, slot.tex);
-          gl.uniform1i(locCloneTex, 0);
-          gl.uniform1f(locAge, ageNorm);
-          gl.uniform1f(locAlpha, Math.max(0.0, timeFade * slotFade));
-
+          gl.uniform1i(pClone.u.uCloneTex, 0);
+          gl.uniform1f(pClone.u.uAge, ageNorm);
+          gl.uniform1f(pClone.u.uAlpha, alpha);
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
-        // 3) Draw Active Live Person on Top
-        gl.useProgram(progCutout);
+        // 3) Render Clean Live Person on Top
+        gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
-        gl.uniform1i(gl.getUniformLocation(progCutout, "uVideoTex"), 0);
+        gl.uniform1i(pCutout.u.uVideoTex, 0);
 
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, maskTex);
-        gl.uniform1i(gl.getUniformLocation(progCutout, "uMaskTex"), 1);
+        gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
+        gl.uniform1i(pCutout.u.uMaskTex, 1);
 
-        gl.uniform2f(gl.getUniformLocation(progCutout, "uUvScale"), uvScaleX, uvScaleY);
-        gl.uniform2f(gl.getUniformLocation(progCutout, "uMaskTexel"), 1 / maskW, 1 / maskH);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uMirror"), mirrorFlag);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uThresh"), state.threshold);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uOutline"), state.outline);
-        gl.uniform1f(gl.getUniformLocation(progCutout, "uIsLive"), 1.0);
-
+        gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
+        gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1594,15 +1730,20 @@
       state.bgMode = parseInt(optBgMode.value, 10);
     });
 
+    optOpacity.addEventListener("input", () => {
+      const pct = parseInt(optOpacity.value, 10);
+      state.cloneOpacity = pct / 100;
+      document.getElementById("valOpacity").textContent = `${pct}%`;
+    });
+
     optThresh.addEventListener("input", () => {
       state.threshold = parseFloat(optThresh.value);
       document.getElementById("valThresh").textContent = state.threshold.toFixed(2);
     });
 
-    optOutline.addEventListener("input", () => {
-      const pct = parseInt(optOutline.value, 10);
-      state.outline = pct / 100;
-      document.getElementById("valOutline").textContent = `${pct}%`;
+    optSmooth.addEventListener("input", () => {
+      state.smoothRadius = parseFloat(optSmooth.value);
+      document.getElementById("valSmooth").textContent = state.smoothRadius.toFixed(1);
     });
 
     optMirror.addEventListener("change", () => {
@@ -1612,8 +1753,9 @@
 
     optEco.addEventListener("change", () => {
       state.eco = optEco.checked;
+      lastMaskSrcAspect = 0;
       resizeCanvas();
-      rebuildFboPool();
+      rebuildTrailPool();
     });
 
     switchCamBtn.addEventListener("click", async () => {
@@ -1622,7 +1764,7 @@
         await startCamera();
       } catch (err) {
         console.error(err);
-        startupMsg.textContent = "Could not switch camera. Try Demo Mode or check camera permissions.";
+        startupMsg.textContent = "Could not switch camera. Check permissions or use Demo Mode.";
         startupOverlay.classList.remove("hidden");
       }
     });
@@ -1647,7 +1789,7 @@
       } catch (err) {
         console.warn("Camera access error:", err);
         startupMsg.textContent =
-          "Camera access was blocked or unavailable. Grant permission in browser settings, or launch Demo Silhouette Mode.";
+          "Camera access was blocked or unavailable. Grant permission in browser settings, or launch Demo Mode.";
         startCamBtn.disabled = false;
         startCamBtn.textContent = "Retry Camera";
       }
