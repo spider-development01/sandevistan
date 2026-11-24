@@ -206,7 +206,7 @@
       bottom: calc(70px + var(--safe-bottom));
       z-index: 29;
       width: min(350px, calc(100vw - 32px));
-      max-height: min(68dvh, 580px);
+      max-height: min(68dvh, 560px);
       overflow-y: auto;
       overscroll-behavior: contain;
       background: var(--panel-bg);
@@ -563,36 +563,26 @@
 
     <div class="control-group">
       <div class="control-label">
-        <span>Body Tracking Model</span>
-      </div>
-      <select id="optModel">
-        <option value="fast" selected>Fast Full-Person (Best Mobile FPS)</option>
-        <option value="multiclass">Multiclass HD (Desktop / High-End)</option>
-      </select>
-    </div>
-
-    <div class="control-group">
-      <div class="control-label">
         <span>Trail Clones</span>
-        <span class="control-val" id="valClones">16</span>
+        <span class="control-val" id="valClones">18</span>
       </div>
-      <input type="range" id="optClones" min="4" max="42" step="1" value="16" />
+      <input type="range" id="optClones" min="4" max="42" step="1" value="18" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Capture Spacing</span>
-        <span class="control-val" id="valInterval">42 ms</span>
+        <span class="control-val" id="valInterval">40 ms</span>
       </div>
-      <input type="range" id="optInterval" min="16" max="150" step="2" value="42" />
+      <input type="range" id="optInterval" min="16" max="150" step="2" value="40" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Trail Persistence</span>
-        <span class="control-val" id="valDecay">1.6 s</span>
+        <span class="control-val" id="valDecay">1.5 s</span>
       </div>
-      <input type="range" id="optDecay" min="0.4" max="6.0" step="0.1" value="1.6" />
+      <input type="range" id="optDecay" min="0.4" max="6.0" step="0.1" value="1.5" />
     </div>
 
     <div class="toggle-row">
@@ -606,9 +596,9 @@
     <div class="control-group" style="margin-top: 8px;">
       <div class="control-label">
         <span>Motion Threshold</span>
-        <span class="control-val" id="valMotion">6%</span>
+        <span class="control-val" id="valMotion">10%</span>
       </div>
-      <input type="range" id="optMotion" min="0" max="60" step="1" value="6" />
+      <input type="range" id="optMotion" min="0" max="60" step="1" value="10" />
     </div>
 
     <div class="control-group">
@@ -638,25 +628,25 @@
     <div class="control-group">
       <div class="control-label">
         <span>Clone Opacity</span>
-        <span class="control-val" id="valOpacity">92%</span>
+        <span class="control-val" id="valOpacity">90%</span>
       </div>
-      <input type="range" id="optOpacity" min="30" max="100" step="2" value="92" />
+      <input type="range" id="optOpacity" min="30" max="100" step="2" value="90" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Background Rejection (Cutoff)</span>
-        <span class="control-val" id="valThresh">0.50</span>
+        <span>Mask Cutoff</span>
+        <span class="control-val" id="valThresh">0.54</span>
       </div>
-      <input type="range" id="optThresh" min="0.25" max="0.80" step="0.02" value="0.50" />
+      <input type="range" id="optThresh" min="0.30" max="0.80" step="0.02" value="0.54" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Edge Smoothness</span>
-        <span class="control-val" id="valSmooth">0.7</span>
+        <span>Edge Feather Smoothness</span>
+        <span class="control-val" id="valSmooth">1.0</span>
       </div>
-      <input type="range" id="optSmooth" min="0.3" max="2.0" step="0.1" value="0.7" />
+      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.0" />
     </div>
 
     <div class="control-group">
@@ -684,7 +674,7 @@
     </div>
 
     <div class="toggle-row">
-      <span>Eco Resolution Mode</span>
+      <span>Eco Mobile Mode</span>
       <label class="switch">
         <input type="checkbox" id="optEco" />
         <span class="slider-switch"></span>
@@ -705,7 +695,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Allow camera access for real-time body tracking and clean chromatic after-trails locked behind you.
+        Allow camera access to track your movement and render smooth chromatic after-trails behind you.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -726,18 +716,17 @@
     const isLikelyMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
     const state = {
-      modelType: isLikelyMobile ? "fast" : "multiclass",
       maxSlots: 42,
       clones: isLikelyMobile ? 16 : 24,
-      intervalMs: isLikelyMobile ? 42 : 36,
-      decaySec: 1.6,
+      intervalMs: isLikelyMobile ? 42 : 38,
+      decaySec: 1.5,
       infinite: false,
-      motionPct: 6,
+      motionPct: 10,
       palette: 0,
       bgMode: 0,
-      cloneOpacity: 0.92,
-      threshold: 0.50,
-      smoothRadius: 0.7,
+      cloneOpacity: 0.90,
+      threshold: 0.54,
+      smoothRadius: 1.0,
       fitContain: false,
       mirror: true,
       eco: isLikelyMobile,
@@ -781,7 +770,6 @@
     const startCamBtn = document.getElementById("startCamBtn");
     const startDemoBtn = document.getElementById("startDemoBtn");
 
-    const optModel = document.getElementById("optModel");
     const optClones = document.getElementById("optClones");
     const optInterval = document.getElementById("optInterval");
     const optDecay = document.getElementById("optDecay");
@@ -800,7 +788,6 @@
     const toggleDemoBtn = document.getElementById("toggleDemoBtn");
     const replayAudioBtn = document.getElementById("replayAudioBtn");
 
-    optModel.value = state.modelType;
     optClones.value = state.clones;
     document.getElementById("valClones").textContent = state.clones;
     optInterval.value = state.intervalMs;
@@ -963,7 +950,7 @@
     syncAudioSettings();
 
     // =========================================================================
-    // 4. WebGL2 Initialization
+    // 4. WebGL2 Initialization (Clean Consistent UNPACK_FLIP_Y_WEBGL = true)
     // =========================================================================
     const gl = canvas.getContext("webgl2", {
       alpha: false,
@@ -979,7 +966,7 @@
       throw new Error("WebGL2 is required.");
     }
 
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     const VS_QUAD = `#version 300 es
     precision highp float;
@@ -990,48 +977,7 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Pass 1: Majority-Protected 3x3 Cleanup (kills isolated background noise, fills interior body holes)
-    const FS_MASK_CLEAN = `#version 300 es
-    precision highp float;
-    in vec2 vUv;
-    out vec4 fragColor;
-
-    uniform sampler2D uMaskIn;
-    uniform vec2 uStep;
-    uniform float uThresh;
-
-    void main() {
-      vec2 baseUv = vec2(vUv.x, 1.0 - vUv.y);
-      float center = texture(uMaskIn, baseUv).r;
-      float maxN = 0.0;
-      float sumN = 0.0;
-      int activeCount = 0;
-
-      for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-          vec2 sUv = clamp(baseUv + vec2(float(x), float(y)) * uStep, 0.0, 1.0);
-          float s = texture(uMaskIn, sUv).r;
-          maxN = max(maxN, s);
-          sumN += s;
-          if (s >= uThresh) activeCount++;
-        }
-      }
-
-      float outVal = center;
-      if (activeCount <= 2) {
-        // Isolated wall/room noise -> strictly zero so background never tints
-        outVal = 0.0;
-      } else if (activeCount >= 6) {
-        // Solid body interior / small gap -> fill solidly so clones never bleed through
-        outVal = max(center, maxN * 0.96);
-      } else {
-        outVal = mix(center, sumN / 9.0, 0.40);
-      }
-
-      fragColor = vec4(outVal, outVal, outVal, 1.0);
-    }`;
-
-    // Pass 2: Instant-Attack Temporal Stabilizer (zero lag on moving body, smooth static edges)
+    // Mask Pass 1: Fast-attack temporal stabilizer (zero edge jitter, zero lag on movement)
     const FS_MASK_TEMPORAL = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1050,13 +996,16 @@
       float prev = texture(uPrevMask, vUv).r;
       float diff = abs(curr - prev);
 
-      // Instant 100% attack when entering a pixel so live body NEVER turns semi-transparent over clones
-      float speed = curr >= prev ? 1.0 : mix(0.38, 0.96, smoothstep(0.06, 0.20, diff));
+      // Fast attack when entering pixels so live body never lags; gentle release on jitter
+      float speed = curr > prev
+        ? mix(0.86, 1.0, smoothstep(0.02, 0.14, diff))
+        : mix(0.30, 0.96, smoothstep(0.06, 0.24, diff));
+
       float stabilized = mix(prev, curr, speed);
       fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
     }`;
 
-    // Pass 3 & 4: Tight 5-tap separable smooth feather (zero moat, zero jagged edge)
+    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + clean edge feather
     const FS_MASK_BLUR = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1068,20 +1017,24 @@
     uniform float uThresh;
 
     void main() {
-      float sum = texture(uMaskIn, vUv).r * 0.2941176;
-      sum += texture(uMaskIn, vUv + uStep * 1.2).r * 0.2352941;
-      sum += texture(uMaskIn, vUv - uStep * 1.2).r * 0.2352941;
-      sum += texture(uMaskIn, vUv + uStep * 2.6).r * 0.1176471;
-      sum += texture(uMaskIn, vUv - uStep * 2.6).r * 0.1176471;
+      float sum = texture(uMaskIn, vUv).r * 0.2270270;
+      sum += texture(uMaskIn, vUv + uStep * 1.0).r * 0.1945946;
+      sum += texture(uMaskIn, vUv - uStep * 1.0).r * 0.1945946;
+      sum += texture(uMaskIn, vUv + uStep * 2.0).r * 0.1216216;
+      sum += texture(uMaskIn, vUv - uStep * 2.0).r * 0.1216216;
+      sum += texture(uMaskIn, vUv + uStep * 3.0).r * 0.0540541;
+      sum += texture(uMaskIn, vUv - uStep * 3.0).r * 0.0540541;
+      sum += texture(uMaskIn, vUv + uStep * 4.0).r * 0.0162162;
+      sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
 
       if (uFinalPass > 0.5) {
-        // Tight smoothstep: interior >= thresh+0.06 is strict 1.0; background <= thresh-0.08 is strict 0.0
-        sum = smoothstep(uThresh - 0.08, uThresh + 0.06, sum);
+        float feather = 0.12;
+        sum = smoothstep(uThresh - feather, uThresh + feather, sum);
       }
       fragColor = vec4(sum, sum, sum, 1.0);
     }`;
 
-    // Real camera background shader (strictly untouched natural room by default)
+    // Real camera background shader
     const FS_BG = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1099,15 +1052,15 @@
         return;
       }
 
-      vec2 screenUv = (vUv - 0.5) * uUvScale + 0.5;
-      if (uMirror > 0.5) screenUv.x = 1.0 - screenUv.x;
+      vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) uv.x = 1.0 - uv.x;
 
-      if (screenUv.x < 0.0 || screenUv.x > 1.0 || screenUv.y < 0.0 || screenUv.y > 1.0) {
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         fragColor = vec4(0.03, 0.04, 0.06, 1.0);
         return;
       }
 
-      vec3 vid = texture(uVideoTex, vec2(screenUv.x, 1.0 - screenUv.y)).rgb;
+      vec3 vid = texture(uVideoTex, uv).rgb;
 
       if (uBgMode == 1) {
         fragColor = vec4(vid * 0.48, 1.0);
@@ -1124,7 +1077,7 @@
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: uses exact unified maskFinal for both clones & live foreground (no boundary moat)
+    // Cutout shader: clean premultiplied alpha for clones & solid interior for live self
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1134,33 +1087,40 @@
     uniform sampler2D uMaskTex;
     uniform vec2 uUvScale;
     uniform float uMirror;
+    uniform float uIsLive;
 
     void main() {
-      vec2 screenUv = (vUv - 0.5) * uUvScale + 0.5;
-      if (uMirror > 0.5) screenUv.x = 1.0 - screenUv.x;
+      vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) uv.x = 1.0 - uv.x;
 
-      if (screenUv.x < 0.0 || screenUv.x > 1.0 || screenUv.y < 0.0 || screenUv.y > 1.0) {
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
         fragColor = vec4(0.0);
         return;
       }
 
-      float alpha = texture(uMaskTex, screenUv).r;
+      float rawAlpha = texture(uMaskTex, uv).r;
+      // Live foreground hits solid 1.0 across interior without pushing boundary outward
+      float alpha = uIsLive > 0.5 ? smoothstep(0.06, 0.48, rawAlpha) : rawAlpha;
+
       if (alpha < 0.015) {
         fragColor = vec4(0.0);
         return;
       }
 
-      vec3 rgb = texture(uVideoTex, vec2(screenUv.x, 1.0 - screenUv.y)).rgb;
+      vec3 rgb = texture(uVideoTex, uv).rgb;
       fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone shader: smooth photographic tinting, layered seamlessly behind live foreground
+    // Clone shader: smooth photographic tinting + interior live occlusion (no boundary moat)
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
     out vec4 fragColor;
 
     uniform sampler2D uCloneTex;
+    uniform sampler2D uLiveMaskTex;
+    uniform vec2 uUvScale;
+    uniform float uMirror;
     uniform float uAge;
     uniform float uAlpha;
     uniform int uPalette;
@@ -1216,6 +1176,16 @@
       float a = tex.a;
       if (a < 0.015) discard;
 
+      // Soft interior occlusion: erases clones strictly behind live body with zero outer gap
+      vec2 liveUv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) liveUv.x = 1.0 - liveUv.x;
+      float occ = 0.0;
+      if (liveUv.x >= 0.0 && liveUv.x <= 1.0 && liveUv.y >= 0.0 && liveUv.y <= 1.0) {
+        float liveMask = texture(uLiveMaskTex, liveUv).r;
+        occ = smoothstep(0.22, 0.68, liveMask);
+      }
+      if (occ >= 0.995) discard;
+
       vec3 rawRgb = clamp(tex.rgb / max(a, 0.001), 0.0, 1.0);
       float lum = dot(rawRgb, vec3(0.299, 0.587, 0.114));
 
@@ -1229,7 +1199,9 @@
       vec3 highlightLift = mix(colorized, vec3(1.0), pow(lum, 2.6) * 0.22);
       vec3 finalCol = clamp(mix(highlightLift, rawRgb * tint * 1.35, 0.12), 0.0, 1.0);
 
-      float outAlpha = a * uAlpha;
+      float outAlpha = a * uAlpha * (1.0 - occ);
+      if (outAlpha < 0.01) discard;
+
       fragColor = vec4(finalCol * outAlpha, outAlpha);
     }`;
 
@@ -1258,9 +1230,6 @@
       return { prog, u: uniforms };
     }
 
-    const pMaskClean = createProgram(VS_QUAD, FS_MASK_CLEAN, [
-      "uMaskIn", "uStep", "uThresh"
-    ]);
     const pMaskTemporal = createProgram(VS_QUAD, FS_MASK_TEMPORAL, [
       "uCurrMask", "uPrevMask", "uHasHistory"
     ]);
@@ -1271,10 +1240,10 @@
       "uVideoTex", "uUvScale", "uMirror", "uBgMode", "uHasSource"
     ]);
     const pCutout = createProgram(VS_QUAD, FS_CUTOUT, [
-      "uVideoTex", "uMaskTex", "uUvScale", "uMirror"
+      "uVideoTex", "uMaskTex", "uUvScale", "uMirror", "uIsLive"
     ]);
     const pClone = createProgram(VS_QUAD, FS_CLONE, [
-      "uCloneTex", "uAge", "uAlpha", "uPalette"
+      "uCloneTex", "uLiveMaskTex", "uUvScale", "uMirror", "uAge", "uAlpha", "uPalette"
     ]);
 
     const quadVao = gl.createVertexArray();
@@ -1316,7 +1285,7 @@
     const maskRawTex = createLinearTex();
 
     // =========================================================================
-    // 5. FBO Pools (4-Pass Mask Refinement + Trail Ring Buffer)
+    // 5. FBO Pools (3-Pass Smooth Mask + Trail Ring Buffer)
     // =========================================================================
     let trailW = 480;
     let trailH = 360;
@@ -1324,13 +1293,11 @@
     let maskFboH = 192;
     const fboPool = [];
 
-    let maskClean = null;
     let maskHist = [null, null];
     let maskBlurTemp = null;
     let maskFinal = null;
 
     function rebuildMaskFbos(srcW = 640, srcH = 480) {
-      destroyFbo(maskClean);
       maskHist.forEach(destroyFbo);
       destroyFbo(maskBlurTemp);
       destroyFbo(maskFinal);
@@ -1345,7 +1312,6 @@
         maskFboW = Math.max(96, Math.round(maxMaskDim * aspect));
       }
 
-      maskClean = createFbo(maskFboW, maskFboH);
       maskHist = [createFbo(maskFboW, maskFboH), createFbo(maskFboW, maskFboH)];
       maskBlurTemp = createFbo(maskFboW, maskFboH);
       maskFinal = createFbo(maskFboW, maskFboH);
@@ -1518,90 +1484,50 @@
     }
 
     // =========================================================================
-    // 7. MediaPipe ImageSegmenter Setup
+    // 7. MediaPipe ImageSegmenter Setup (Clean, Fast Selfie Segmenter float16)
     // =========================================================================
-    let visionTasks = null;
     let imageSegmenter = null;
-    let isSwitchingModel = false;
 
-    const MODELS = {
-      fast:
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-      multiclass:
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite"
-    };
+    async function initSegmenter() {
+      statusText.textContent = "LOADING NEURAL MASK...";
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
+      );
 
-    async function createSegmenterWithModel(modelKey) {
-      if (!visionTasks) {
-        visionTasks = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
-        );
-      }
+      const modelUrl =
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
 
-      const url = MODELS[modelKey] || MODELS.fast;
       try {
-        return await ImageSegmenter.createFromOptions(visionTasks, {
-          baseOptions: { modelAssetPath: url, delegate: "GPU" },
+        imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: modelUrl, delegate: "GPU" },
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
         });
       } catch (gpuErr) {
-        console.warn("GPU delegate failed, falling back to CPU:", gpuErr);
-        return await ImageSegmenter.createFromOptions(visionTasks, {
-          baseOptions: { modelAssetPath: url, delegate: "CPU" },
+        console.warn("GPU delegate unavailable, falling back to CPU:", gpuErr);
+        imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: modelUrl, delegate: "CPU" },
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
         });
       }
-    }
-
-    async function loadSegmenter(modelKey) {
-      isSwitchingModel = true;
-      state.segmenterReady = false;
-      statusDot.className = "status-dot";
-      statusText.textContent = "LOADING AI MODEL...";
-
-      const oldSeg = imageSegmenter;
-      imageSegmenter = null;
-      if (oldSeg) {
-        try { oldSeg.close(); } catch {}
-      }
-
-      try {
-        imageSegmenter = await createSegmenterWithModel(modelKey);
-        state.modelType = modelKey;
-      } catch (err) {
-        if (modelKey !== "fast") {
-          console.warn("Falling back to fast model:", err);
-          imageSegmenter = await createSegmenterWithModel("fast");
-          state.modelType = "fast";
-          optModel.value = "fast";
-        } else {
-          throw err;
-        }
-      } finally {
-        isSwitchingModel = false;
-      }
 
       state.segmenterReady = true;
-      state.hasMaskHistory = false;
-      state.prevMaskSample = null;
       updateStatusHUD();
     }
 
     function updateStatusHUD() {
-      if (isSwitchingModel || !state.segmenterReady) {
+      if (!state.segmenterReady) {
         statusDot.className = "status-dot";
-        statusText.textContent = "LOADING AI MODEL...";
+        statusText.textContent = "LOADING MODEL...";
       } else if (state.demoMode) {
         statusDot.className = "status-dot live";
         statusText.textContent = "DEMO MODE";
       } else if (state.cameraReady) {
         statusDot.className = "status-dot live";
-        statusText.textContent =
-          state.modelType === "multiclass" ? "MULTICLASS HD" : "LIVE TRACKING";
+        statusText.textContent = "LIVE OPTICS";
       } else {
         statusDot.className = "status-dot";
         statusText.textContent = "AWAITING CAMERA";
@@ -1669,31 +1595,21 @@
     }
 
     // =========================================================================
-    // 9. Segmentation + GPU 4-Pass Mask Refinement
+    // 9. Segmentation + GPU 3-Pass Smooth Mask Refinement
     // =========================================================================
     function refineMaskOnGpu() {
       gl.bindVertexArray(quadVao);
       gl.disable(gl.BLEND);
       gl.viewport(0, 0, maskFboW, maskFboH);
 
-      // Pass 1: Flip Y + Majority-Protected 3x3 Cleanup (kills wall noise, fills body holes)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, maskClean.fbo);
-      gl.useProgram(pMaskClean.prog);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
-      gl.uniform1i(pMaskClean.u.uMaskIn, 0);
-      gl.uniform2f(pMaskClean.u.uStep, 1.0 / maskW, 1.0 / maskH);
-      gl.uniform1f(pMaskClean.u.uThresh, state.threshold);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      // Pass 2: Instant-Attack Temporal Stabilizer
+      // Pass 1: Temporal stabilization
       const writeIdx = state.histWriteIdx;
       const readIdx = 1 - writeIdx;
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskHist[writeIdx].fbo);
       gl.useProgram(pMaskTemporal.prog);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, maskClean.tex);
+      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
       gl.uniform1i(pMaskTemporal.u.uCurrMask, 0);
 
       gl.activeTexture(gl.TEXTURE1);
@@ -1705,7 +1621,7 @@
       state.hasMaskHistory = true;
       state.histWriteIdx = readIdx;
 
-      // Pass 3: Horizontal smooth feather
+      // Pass 2: Horizontal 9-tap Gaussian blur
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskBlurTemp.fbo);
       gl.useProgram(pMaskBlur.prog);
       gl.activeTexture(gl.TEXTURE0);
@@ -1716,7 +1632,7 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 4: Vertical smooth feather + tight threshold -> maskFinal
+      // Pass 3: Vertical 9-tap Gaussian blur + clean edge feather -> maskFinal
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
@@ -1730,7 +1646,7 @@
     }
 
     function runSegmentation(sourceEl, srcW, srcH, nowMs) {
-      if (!imageSegmenter || !state.segmenterReady || isSwitchingModel) return;
+      if (!imageSegmenter || !state.segmenterReady) return;
 
       const srcAspect = srcW / Math.max(1, srcH);
       if (Math.abs(srcAspect - lastMaskSrcAspect) > 0.02) {
@@ -1760,11 +1676,10 @@
         const masks = result.confidenceMasks;
         if (!masks || masks.length === 0) return;
 
-        const useInvert = masks.length > 2;
-        const targetMask = masks.length === 2 ? masks[1] : masks[0];
-        const floats = targetMask.getAsFloat32Array();
-        const mw = targetMask.width;
-        const mh = targetMask.height;
+        const personMask = masks[masks.length - 1];
+        const floats = personMask.getAsFloat32Array();
+        const mw = personMask.width;
+        const mh = personMask.height;
 
         if (!maskBytes || maskW !== mw || maskH !== mh) {
           maskW = mw;
@@ -1774,31 +1689,29 @@
 
         const len = floats.length;
         for (let i = 0; i < len; i++) {
-          const p = useInvert ? 1.0 - floats[i] : floats[i];
-          maskBytes[i] = p <= 0 ? 0 : p >= 1 ? 255 : (p * 255) | 0;
+          const v = floats[i];
+          maskBytes[i] = v <= 0 ? 0 : v >= 1 ? 255 : (v * 255) | 0;
         }
 
-        const stride = 16;
+        const stride = 20;
         const sampleCount = Math.ceil(len / stride);
         if (!state.prevMaskSample || state.prevMaskSample.length !== sampleCount) {
           state.prevMaskSample = new Float32Array(sampleCount);
           for (let i = 0, j = 0; i < len; i += stride, j++) {
-            state.prevMaskSample[j] = useInvert ? 1.0 - floats[i] : floats[i];
+            state.prevMaskSample[j] = floats[i];
           }
           state.motionLevel = 1.0;
         } else {
           let diffSum = 0;
           for (let i = 0, j = 0; i < len; i += stride, j++) {
-            const p = useInvert ? 1.0 - floats[i] : floats[i];
-            const d = Math.abs(p - state.prevMaskSample[j]);
+            const d = Math.abs(floats[i] - state.prevMaskSample[j]);
             if (d > 0.10) diffSum += d;
-            state.prevMaskSample[j] = p;
+            state.prevMaskSample[j] = floats[i];
           }
-          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 24.0);
+          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 20.0);
         }
 
         gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, maskW, maskH, 0, gl.RED, gl.UNSIGNED_BYTE, maskBytes);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -1884,7 +1797,6 @@
 
       if (sourceEl && hasNewFrame) {
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceEl);
         runSegmentation(sourceEl, srcW, srcH, nowMs);
@@ -1925,6 +1837,7 @@
 
         gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
         gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
+        gl.uniform1f(pCutout.u.uIsLive, 0.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1948,8 +1861,13 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Render Clones Oldest -> Newest
+        // 2) Render Clones Oldest -> Newest (occluded cleanly behind live interior)
         gl.useProgram(pClone.prog);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
+        gl.uniform1i(pClone.u.uLiveMaskTex, 1);
+        gl.uniform2f(pClone.u.uUvScale, uvScaleX, uvScaleY);
+        gl.uniform1f(pClone.u.uMirror, mirrorFlag);
         gl.uniform1i(pClone.u.uPalette, state.palette);
 
         const count = state.clones;
@@ -1982,7 +1900,7 @@
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
-        // 3) Render Solid Live Foreground Person Strictly on Top (seamless, zero boundary moat)
+        // 3) Render Solid Live Foreground Person Strictly on Top
         gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
@@ -1994,6 +1912,7 @@
 
         gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
         gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
+        gl.uniform1f(pCutout.u.uIsLive, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -2023,16 +1942,6 @@
     canvas.addEventListener("click", () => {
       if (settingsPanel.classList.contains("open")) {
         setSettingsOpen(false);
-      }
-    });
-
-    optModel.addEventListener("change", async () => {
-      try {
-        await loadSegmenter(optModel.value);
-      } catch (err) {
-        console.error("Model switch error:", err);
-        statusDot.className = "status-dot error";
-        statusText.textContent = "MODEL LOAD FAILED";
       }
     });
 
@@ -2162,7 +2071,7 @@
     (async function boot() {
       requestAnimationFrame(renderFrame);
       try {
-        await loadSegmenter(state.modelType);
+        await initSegmenter();
       } catch (err) {
         console.error("MediaPipe init error:", err);
         statusDot.className = "status-dot error";
