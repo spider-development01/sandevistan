@@ -64,12 +64,18 @@
       gap: 8px;
     }
 
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 6px 12px;
-      background: rgba(10, 13, 19, 0.72);
+      background: rgba(10, 13, 19, 0.74);
       border: 1px solid rgba(44, 246, 255, 0.35);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
@@ -78,6 +84,19 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #d9f3ff;
+      pointer-events: auto;
+    }
+
+    .audio-btn {
+      cursor: pointer;
+      font-family: inherit;
+      touch-action: manipulation;
+      transition: border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .audio-btn.needs-tap {
+      border-color: var(--accent-yellow);
+      color: var(--accent-yellow);
     }
 
     .status-dot {
@@ -515,7 +534,12 @@
       <span id="statusDot" class="status-dot"></span>
       <span id="statusText">INITIALIZING...</span>
     </div>
-    <div class="status-badge" id="fpsBadge">-- FPS</div>
+    <div class="hud-right">
+      <button id="audioToggleBtn" class="status-badge audio-btn" title="Toggle Audio">
+        <span id="audioLabel">♪ AUDIO</span>
+      </button>
+      <div class="status-badge" id="fpsBadge">-- FPS</div>
+    </div>
   </div>
 
   <!-- Bottom-Left Refresh Button -->
@@ -612,17 +636,25 @@
     <div class="control-group">
       <div class="control-label">
         <span>Mask Cutoff</span>
-        <span class="control-val" id="valThresh">0.55</span>
+        <span class="control-val" id="valThresh">0.54</span>
       </div>
-      <input type="range" id="optThresh" min="0.25" max="0.85" step="0.02" value="0.55" />
+      <input type="range" id="optThresh" min="0.25" max="0.85" step="0.02" value="0.54" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Edge Feather Smoothness</span>
-        <span class="control-val" id="valSmooth">1.2</span>
+        <span class="control-val" id="valSmooth">1.1</span>
       </div>
-      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.2" />
+      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.1" />
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Audio Volume</span>
+        <span class="control-val" id="valVolume">85%</span>
+      </div>
+      <input type="range" id="optVolume" min="0" max="100" step="5" value="85" />
     </div>
 
     <div class="toggle-row">
@@ -645,6 +677,9 @@
       <button id="switchCamBtn" class="mini-btn">⇄ Flip Cam</button>
       <button id="toggleDemoBtn" class="mini-btn">◈ Demo Mode</button>
     </div>
+    <div class="btn-row">
+      <button id="replayAudioBtn" class="mini-btn" style="grid-column: span 2;">♪ Replay Activate → Song</button>
+    </div>
   </aside>
 
   <!-- Startup / Permission Overlay -->
@@ -652,7 +687,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Allow camera access to track your body movements in real time and render smooth chromatic after-trail clones over your live feed.
+        Allow camera access to track your body movements in real time with chromatic after-trails locked strictly behind you.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -682,8 +717,8 @@
       palette: 0,
       bgMode: 0,
       cloneOpacity: 0.90,
-      threshold: 0.55,
-      smoothRadius: 1.2,
+      threshold: 0.54,
+      smoothRadius: 1.1,
       mirror: true,
       eco: isLikelyMobile,
       facingMode: "user",
@@ -698,6 +733,8 @@
       motionLevel: 1.0,
       hasMaskHistory: false,
       histWriteIdx: 0,
+      volume: 0.85,
+      muted: false,
       fpsFrames: 0,
       fpsLastTime: performance.now()
     };
@@ -712,6 +749,8 @@
     const fpsBadge = document.getElementById("fpsBadge");
     const flashRing = document.getElementById("flashRing");
 
+    const audioToggleBtn = document.getElementById("audioToggleBtn");
+    const audioLabel = document.getElementById("audioLabel");
     const likeEverythingBtn = document.getElementById("likeEverythingBtn");
     const settingsToggleBtn = document.getElementById("settingsToggleBtn");
     const settingsPanel = document.getElementById("settingsPanel");
@@ -732,15 +771,183 @@
     const optOpacity = document.getElementById("optOpacity");
     const optThresh = document.getElementById("optThresh");
     const optSmooth = document.getElementById("optSmooth");
+    const optVolume = document.getElementById("optVolume");
     const optMirror = document.getElementById("optMirror");
     const optEco = document.getElementById("optEco");
     const switchCamBtn = document.getElementById("switchCamBtn");
     const toggleDemoBtn = document.getElementById("toggleDemoBtn");
+    const replayAudioBtn = document.getElementById("replayAudioBtn");
 
     optEco.checked = state.eco;
 
     // =========================================================================
-    // 3. WebGL2 Initialization & Shaders
+    // 3. Audio Pipeline (activate.mp3 -> song.mp3)
+    // =========================================================================
+    const activateAudio = new Audio("./activate.mp3");
+    activateAudio.preload = "auto";
+    activateAudio.loop = false;
+
+    const songAudio = new Audio("./song.mp3");
+    songAudio.preload = "auto";
+    songAudio.loop = true;
+
+    let audioPhase = "idle"; // "idle" | "blocked" | "activate" | "song" | "missing"
+    let songUnlocked = false;
+
+    function syncAudioSettings() {
+      const vol = state.muted ? 0 : state.volume;
+      activateAudio.volume = vol;
+      songAudio.volume = vol;
+      activateAudio.muted = state.muted;
+      songAudio.muted = state.muted;
+
+      audioToggleBtn.classList.toggle("needs-tap", audioPhase === "blocked");
+      if (state.muted) {
+        audioLabel.textContent = "✕ MUTED";
+      } else if (audioPhase === "blocked") {
+        audioLabel.textContent = "♪ TAP AUDIO";
+      } else if (audioPhase === "activate") {
+        audioLabel.textContent = "♪ ACTIVATE";
+      } else if (audioPhase === "song") {
+        audioLabel.textContent = "♪ PLAYING";
+      } else if (audioPhase === "missing") {
+        audioLabel.textContent = "♪ NO MP3";
+      } else {
+        audioLabel.textContent = "♪ AUDIO";
+      }
+    }
+
+    function unlockSongForMobile() {
+      if (songUnlocked) return;
+      songUnlocked = true;
+      const prevMuted = songAudio.muted;
+      songAudio.muted = true;
+      songAudio
+        .play()
+        .then(() => {
+          if (audioPhase !== "song") {
+            songAudio.pause();
+            songAudio.currentTime = 0;
+          }
+          songAudio.muted = state.muted ? true : prevMuted;
+        })
+        .catch(() => {
+          songAudio.muted = state.muted;
+        });
+    }
+
+    function startSongTrack() {
+      audioPhase = "song";
+      songAudio.currentTime = 0;
+      songAudio.volume = state.muted ? 0 : state.volume;
+      songAudio.muted = state.muted;
+      songAudio
+        .play()
+        .then(() => {
+          syncAudioSettings();
+        })
+        .catch((err) => {
+          if (err && err.name === "NotAllowedError") {
+            audioPhase = "blocked";
+            attachGestureAudioUnlock();
+          } else {
+            audioPhase = "missing";
+          }
+          syncAudioSettings();
+        });
+    }
+
+    activateAudio.addEventListener("ended", () => {
+      if (audioPhase === "activate") {
+        startSongTrack();
+      }
+    });
+
+    activateAudio.addEventListener("error", () => {
+      if (audioPhase === "activate") {
+        startSongTrack();
+      }
+    });
+
+    songAudio.addEventListener("error", () => {
+      if (audioPhase === "song") {
+        audioPhase = "missing";
+        syncAudioSettings();
+      }
+    });
+
+    function startAudioSequence(forceRestart = false) {
+      if (!forceRestart && (audioPhase === "activate" || audioPhase === "song")) {
+        return;
+      }
+
+      unlockSongForMobile();
+      songAudio.pause();
+      songAudio.currentTime = 0;
+
+      activateAudio.pause();
+      activateAudio.currentTime = 0;
+      activateAudio.volume = state.muted ? 0 : state.volume;
+      activateAudio.muted = state.muted;
+
+      audioPhase = "activate";
+      syncAudioSettings();
+
+      activateAudio
+        .play()
+        .then(() => {
+          syncAudioSettings();
+        })
+        .catch((err) => {
+          if (err && err.name === "NotAllowedError") {
+            audioPhase = "blocked";
+            syncAudioSettings();
+            attachGestureAudioUnlock();
+          } else {
+            // If activate.mp3 is unavailable/corrupt, fall through to song.mp3
+            startSongTrack();
+          }
+        });
+    }
+
+    let gestureUnlockAttached = false;
+    function attachGestureAudioUnlock() {
+      if (gestureUnlockAttached) return;
+      gestureUnlockAttached = true;
+
+      const onFirstGesture = () => {
+        gestureUnlockAttached = false;
+        window.removeEventListener("pointerdown", onFirstGesture, true);
+        window.removeEventListener("keydown", onFirstGesture, true);
+        if (audioPhase === "blocked" || audioPhase === "idle") {
+          startAudioSequence(true);
+        }
+      };
+
+      window.addEventListener("pointerdown", onFirstGesture, true);
+      window.addEventListener("keydown", onFirstGesture, true);
+    }
+
+    audioToggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (audioPhase === "blocked" || audioPhase === "idle") {
+        state.muted = false;
+        startAudioSequence(true);
+        return;
+      }
+      state.muted = !state.muted;
+      syncAudioSettings();
+    });
+
+    replayAudioBtn.addEventListener("click", () => {
+      state.muted = false;
+      startAudioSequence(true);
+    });
+
+    syncAudioSettings();
+
+    // =========================================================================
+    // 4. WebGL2 Initialization & Shaders
     // =========================================================================
     const gl = canvas.getContext("webgl2", {
       alpha: false,
@@ -767,7 +974,7 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Mask Pass 1: Velocity-adaptive temporal stabilization
+    // Mask Pass 1: Fast-attack velocity-adaptive temporal stabilization
     const FS_MASK_TEMPORAL = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -785,13 +992,17 @@
       }
       float prev = texture(uPrevMask, vUv).r;
       float diff = abs(curr - prev);
-      // Heavy jitter suppression on static edges, instant tracking on fast motion
-      float alpha = mix(0.28, 0.96, smoothstep(0.05, 0.25, diff));
-      float stabilized = mix(prev, curr, alpha);
+
+      // Snap immediately onto entering body parts so live silhouette never lags behind
+      float speed = curr > prev
+        ? mix(0.68, 0.98, smoothstep(0.02, 0.14, diff))
+        : mix(0.30, 0.95, smoothstep(0.05, 0.22, diff));
+
+      float stabilized = mix(prev, curr, speed);
       fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
     }`;
 
-    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + final clean feathering
+    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + clean edge feathering
     const FS_MASK_BLUR = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -814,13 +1025,13 @@
       sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
 
       if (uFinalPass > 0.5) {
-        float feather = 0.13;
+        float feather = 0.11;
         sum = smoothstep(uThresh - feather, uThresh + feather, sum);
       }
       fragColor = vec4(sum, sum, sum, 1.0);
     }`;
 
-    // Background shader: Natural live feed / Dimmed / Noir / Black
+    // Real camera background shader
     const FS_BG = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -863,7 +1074,7 @@
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: Pure premultiplied alpha person extraction (zero outlines/artifacts)
+    // Cutout shader: solid core on live foreground, soft premultiplied edge for clones
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -873,6 +1084,7 @@
     uniform sampler2D uMaskTex;
     uniform vec2 uUvScale;
     uniform float uMirror;
+    uniform float uIsLive;
 
     void main() {
       vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
@@ -883,30 +1095,34 @@
         return;
       }
 
-      float alpha = texture(uMaskTex, uv).r;
+      float rawAlpha = texture(uMaskTex, uv).r;
+      // Live foreground gets a rock-solid opaque interior (1.0) so nothing ever bleeds through
+      float alpha = uIsLive > 0.5 ? smoothstep(0.08, 0.46, rawAlpha) : rawAlpha;
+
       if (alpha < 0.015) {
         fragColor = vec4(0.0);
         return;
       }
 
       vec3 rgb = texture(uVideoTex, uv).rgb;
-      // Premultiplied alpha output eliminates dark edge halos under bilinear filtering
       fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone spectrum shader: Smooth luminance-preserving photographic tinting
+    // Clone spectrum shader with strict live-person occlusion (clones ALWAYS stay behind you)
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
     out vec4 fragColor;
 
     uniform sampler2D uCloneTex;
+    uniform sampler2D uLiveMaskTex;
+    uniform vec2 uUvScale;
+    uniform float uMirror;
     uniform float uAge;
     uniform float uAlpha;
     uniform int uPalette;
 
     vec3 cyberprismPalette(float t) {
-      // Matches real-life photo trail: Emerald -> Lime -> Yellow -> Gold -> Warm Coral -> Steel Blue
       vec3 c0 = vec3(0.28, 0.88, 0.42);
       vec3 c1 = vec3(0.68, 0.90, 0.32);
       vec3 c2 = vec3(0.92, 0.84, 0.36);
@@ -957,7 +1173,16 @@
       float a = tex.a;
       if (a < 0.015) discard;
 
-      // Safely un-premultiply color so edges never darken
+      // Occlude clone wherever the live user stands so clones NEVER overlap/cover original self
+      vec2 liveUv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) liveUv.x = 1.0 - liveUv.x;
+      float liveOcclusion = 0.0;
+      if (liveUv.x >= 0.0 && liveUv.x <= 1.0 && liveUv.y >= 0.0 && liveUv.y <= 1.0) {
+        float liveMask = texture(uLiveMaskTex, liveUv).r;
+        liveOcclusion = smoothstep(0.06, 0.44, liveMask);
+      }
+      if (liveOcclusion >= 0.995) discard;
+
       vec3 rawRgb = clamp(tex.rgb / max(a, 0.001), 0.0, 1.0);
       float lum = dot(rawRgb, vec3(0.299, 0.587, 0.114));
 
@@ -967,12 +1192,13 @@
       else if (uPalette == 3) tint = gitsPalette(uAge);
       else tint = cyberprismPalette(uAge);
 
-      // Smooth photographic colorize preserving natural shadows, folds, and speculars
       vec3 colorized = tint * (0.14 + 1.02 * lum);
       vec3 highlightLift = mix(colorized, vec3(1.0), pow(lum, 2.6) * 0.22);
       vec3 finalCol = clamp(mix(highlightLift, rawRgb * tint * 1.35, 0.12), 0.0, 1.0);
 
-      float outAlpha = a * uAlpha;
+      float outAlpha = a * uAlpha * (1.0 - liveOcclusion);
+      if (outAlpha < 0.01) discard;
+
       fragColor = vec4(finalCol * outAlpha, outAlpha);
     }`;
 
@@ -1011,10 +1237,10 @@
       "uVideoTex", "uUvScale", "uMirror", "uBgMode", "uHasSource"
     ]);
     const pCutout = createProgram(VS_QUAD, FS_CUTOUT, [
-      "uVideoTex", "uMaskTex", "uUvScale", "uMirror"
+      "uVideoTex", "uMaskTex", "uUvScale", "uMirror", "uIsLive"
     ]);
     const pClone = createProgram(VS_QUAD, FS_CLONE, [
-      "uCloneTex", "uAge", "uAlpha", "uPalette"
+      "uCloneTex", "uLiveMaskTex", "uUvScale", "uMirror", "uAge", "uAlpha", "uPalette"
     ]);
 
     const quadVao = gl.createVertexArray();
@@ -1059,7 +1285,7 @@
     const maskRawTex = createLinearTex();
 
     // =========================================================================
-    // 4. FBO Pools (Mask Refinement + Trail Ring Buffer)
+    // 5. FBO Pools (Mask Refinement + Trail Ring Buffer)
     // =========================================================================
     let trailW = 640;
     let trailH = 360;
@@ -1152,7 +1378,7 @@
     resizeCanvas();
 
     // =========================================================================
-    // 5. Offscreen Segmentation & Demo Silhouette Canvas
+    // 6. Offscreen Segmentation & Demo Silhouette Canvas
     // =========================================================================
     const segCanvas = document.createElement("canvas");
     const segCtx = segCanvas.getContext("2d", { willReadFrequently: false });
@@ -1254,7 +1480,7 @@
     }
 
     // =========================================================================
-    // 6. MediaPipe ImageSegmenter Setup
+    // 7. MediaPipe ImageSegmenter Setup
     // =========================================================================
     let imageSegmenter = null;
 
@@ -1305,7 +1531,7 @@
     }
 
     // =========================================================================
-    // 7. Camera Management
+    // 8. Camera Management
     // =========================================================================
     let activeStream = null;
 
@@ -1343,6 +1569,7 @@
       startupOverlay.classList.add("hidden");
       clearAllTrails(false);
       updateStatusHUD();
+      startAudioSequence(false);
     }
 
     function activateDemoMode() {
@@ -1359,17 +1586,17 @@
       startupOverlay.classList.add("hidden");
       clearAllTrails(false);
       updateStatusHUD();
+      startAudioSequence(false);
     }
 
     // =========================================================================
-    // 8. Segmentation + GPU 3-Pass Mask Refinement
+    // 9. Segmentation + GPU 3-Pass Mask Refinement
     // =========================================================================
     function refineMaskOnGpu() {
       gl.bindVertexArray(quadVao);
       gl.disable(gl.BLEND);
       gl.viewport(0, 0, maskFboW, maskFboH);
 
-      // Pass 1: Temporal stabilization
       const writeIdx = state.histWriteIdx;
       const readIdx = 1 - writeIdx;
 
@@ -1388,7 +1615,6 @@
       state.hasMaskHistory = true;
       state.histWriteIdx = readIdx;
 
-      // Pass 2: Horizontal 9-tap Gaussian blur
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskBlurTemp.fbo);
       gl.useProgram(pMaskBlur.prog);
       gl.activeTexture(gl.TEXTURE0);
@@ -1399,7 +1625,6 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 3: Vertical 9-tap Gaussian blur + final smooth edge cutoff
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
@@ -1458,7 +1683,6 @@
           maskBytes[i] = v <= 0 ? 0 : v >= 1 ? 255 : (v * 255) | 0;
         }
 
-        // Noise-gated motion detection
         const stride = 20;
         const sampleCount = Math.ceil(len / stride);
         if (!state.prevMaskSample || state.prevMaskSample.length !== sampleCount) {
@@ -1499,7 +1723,7 @@
     }
 
     // =========================================================================
-    // 9. Main Render Loop
+    // 10. Main Render Loop
     // =========================================================================
     function computeUvScale(srcW, srcH) {
       const canvasAspect = canvas.width / Math.max(1, canvas.height);
@@ -1590,6 +1814,7 @@
 
         gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
         gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
+        gl.uniform1f(pCutout.u.uIsLive, 0.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1610,12 +1835,16 @@
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       if (sourceEl && state.hasMaskHistory) {
-        // Premultiplied alpha blending (ZERO dark edges/halos)
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Render Clones Oldest -> Newest
+        // 2) Render Clones Oldest -> Newest (occluded strictly behind live user)
         gl.useProgram(pClone.prog);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
+        gl.uniform1i(pClone.u.uLiveMaskTex, 1);
+        gl.uniform2f(pClone.u.uUvScale, uvScaleX, uvScaleY);
+        gl.uniform1f(pClone.u.uMirror, mirrorFlag);
         gl.uniform1i(pClone.u.uPalette, state.palette);
 
         const count = state.clones;
@@ -1633,7 +1862,6 @@
               slot.active = false;
               continue;
             }
-            // Hold strong visibility through most of the trail, fade gently at the tail
             const progress = elapsed / decayMs;
             timeFade = 1.0 - Math.pow(progress, 2.4);
           }
@@ -1649,7 +1877,7 @@
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
-        // 3) Render Clean Live Person on Top
+        // 3) Render Solid Live Foreground Person on Top
         gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
@@ -1661,6 +1889,7 @@
 
         gl.uniform2f(pCutout.u.uUvScale, uvScaleX, uvScaleY);
         gl.uniform1f(pCutout.u.uMirror, mirrorFlag);
+        gl.uniform1f(pCutout.u.uIsLive, 1.0);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
 
@@ -1668,7 +1897,7 @@
     }
 
     // =========================================================================
-    // 10. UI & Event Wiring
+    // 11. UI & Event Wiring
     // =========================================================================
     likeEverythingBtn.addEventListener("click", () => {
       clearAllTrails(true);
@@ -1746,6 +1975,14 @@
       document.getElementById("valSmooth").textContent = state.smoothRadius.toFixed(1);
     });
 
+    optVolume.addEventListener("input", () => {
+      const pct = parseInt(optVolume.value, 10);
+      state.volume = pct / 100;
+      if (pct > 0 && state.muted) state.muted = false;
+      document.getElementById("valVolume").textContent = `${pct}%`;
+      syncAudioSettings();
+    });
+
     optMirror.addEventListener("change", () => {
       state.mirror = optMirror.checked;
       clearAllTrails(false);
@@ -1784,6 +2021,7 @@
     startCamBtn.addEventListener("click", async () => {
       startCamBtn.disabled = true;
       startCamBtn.textContent = "CONNECTING...";
+      startAudioSequence(true);
       try {
         await startCamera();
       } catch (err) {
@@ -1800,7 +2038,7 @@
     });
 
     // =========================================================================
-    // 11. Boot Sequence
+    // 12. Boot Sequence
     // =========================================================================
     (async function boot() {
       requestAnimationFrame(renderFrame);
