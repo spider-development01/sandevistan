@@ -566,25 +566,26 @@
         <span>Body Tracking Model</span>
       </div>
       <select id="optModel">
-        <option value="multiclass" selected>Full-Body High Precision (Recommended)</option>
-        <option value="fast">Lightweight Selfie (High FPS / Older Phones)</option>
+        <option value="turbo">Turbo Mobile (Fastest 30-60 FPS)</option>
+        <option value="fast">Balanced Selfie (256×256 Fast)</option>
+        <option value="multiclass">Full-Body HD (Desktop / High-End)</option>
       </select>
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Trail Clones</span>
-        <span class="control-val" id="valClones">24</span>
+        <span class="control-val" id="valClones">14</span>
       </div>
-      <input type="range" id="optClones" min="4" max="42" step="1" value="24" />
+      <input type="range" id="optClones" min="4" max="42" step="1" value="14" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Capture Spacing</span>
-        <span class="control-val" id="valInterval">38 ms</span>
+        <span class="control-val" id="valInterval">45 ms</span>
       </div>
-      <input type="range" id="optInterval" min="16" max="150" step="2" value="38" />
+      <input type="range" id="optInterval" min="16" max="150" step="2" value="45" />
     </div>
 
     <div class="control-group">
@@ -646,9 +647,9 @@
     <div class="control-group">
       <div class="control-label">
         <span>Mask Cutoff</span>
-        <span class="control-val" id="valThresh">0.46</span>
+        <span class="control-val" id="valThresh">0.48</span>
       </div>
-      <input type="range" id="optThresh" min="0.20" max="0.80" step="0.02" value="0.46" />
+      <input type="range" id="optThresh" min="0.20" max="0.80" step="0.02" value="0.48" />
     </div>
 
     <div class="control-group">
@@ -697,7 +698,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Allow camera access for full-body tracking and chromatic after-trails locked cleanly behind you.
+        Allow camera access for zero-copy GPU body tracking and chromatic after-trails locked behind you.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -713,22 +714,22 @@
     } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/vision_bundle.mjs";
 
     // =========================================================================
-    // 1. State
+    // 1. State (Adaptive Mobile vs Desktop Defaults)
     // =========================================================================
     const isLikelyMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
     const state = {
-      modelType: "multiclass", // "multiclass" (full body + clothes) | "fast"
+      modelType: isLikelyMobile ? "turbo" : "multiclass",
       maxSlots: 42,
-      clones: 24,
-      intervalMs: 38,
+      clones: isLikelyMobile ? 14 : 24,
+      intervalMs: isLikelyMobile ? 46 : 38,
       decaySec: 1.5,
       infinite: false,
       motionPct: 10,
       palette: 0,
       bgMode: 0,
       cloneOpacity: 0.90,
-      threshold: 0.46,
+      threshold: 0.48,
       smoothRadius: 1.0,
       mirror: true,
       eco: isLikelyMobile,
@@ -740,11 +741,9 @@
       lastVideoTime: -1,
       lastSegTimestamp: 0,
       ringHead: 0,
-      prevMaskSample: null,
       motionLevel: 1.0,
       hasMaskHistory: false,
       histWriteIdx: 0,
-      maskRect: [0, 0, 1, 1], // [uMin, vMin, uMax, vMax] inside 256x256 padded canvas
       volume: 0.85,
       muted: false,
       fpsFrames: 0,
@@ -752,7 +751,7 @@
     };
 
     // =========================================================================
-    // 2. DOM Elements
+    // 2. DOM Elements & Initial Control Sync
     // =========================================================================
     const canvas = document.getElementById("stage");
     const video = document.getElementById("camVideo");
@@ -791,6 +790,11 @@
     const toggleDemoBtn = document.getElementById("toggleDemoBtn");
     const replayAudioBtn = document.getElementById("replayAudioBtn");
 
+    optModel.value = state.modelType;
+    optClones.value = state.clones;
+    document.getElementById("valClones").textContent = state.clones;
+    optInterval.value = state.intervalMs;
+    document.getElementById("valInterval").textContent = `${state.intervalMs} ms`;
     optEco.checked = state.eco;
 
     // =========================================================================
@@ -804,7 +808,7 @@
     songAudio.preload = "auto";
     songAudio.loop = true;
 
-    let audioPhase = "idle"; // "idle" | "blocked" | "activate" | "song" | "missing"
+    let audioPhase = "idle";
     let songUnlocked = false;
 
     function syncAudioSettings() {
@@ -871,15 +875,11 @@
     }
 
     activateAudio.addEventListener("ended", () => {
-      if (audioPhase === "activate") {
-        startSongTrack();
-      }
+      if (audioPhase === "activate") startSongTrack();
     });
 
     activateAudio.addEventListener("error", () => {
-      if (audioPhase === "activate") {
-        startSongTrack();
-      }
+      if (audioPhase === "activate") startSongTrack();
     });
 
     songAudio.addEventListener("error", () => {
@@ -890,9 +890,7 @@
     });
 
     function startAudioSequence(forceRestart = false) {
-      if (!forceRestart && (audioPhase === "activate" || audioPhase === "song")) {
-        return;
-      }
+      if (!forceRestart && (audioPhase === "activate" || audioPhase === "song")) return;
 
       unlockSongForMobile();
       songAudio.pause();
@@ -959,7 +957,7 @@
     syncAudioSettings();
 
     // =========================================================================
-    // 4. WebGL2 Initialization & Shaders
+    // 4. WebGL2 Initialization (Shared with MediaPipe for Zero-Copy GPU Masks)
     // =========================================================================
     const gl = canvas.getContext("webgl2", {
       alpha: false,
@@ -975,7 +973,9 @@
       throw new Error("WebGL2 is required.");
     }
 
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    // IMPORTANT: Keep UNPACK_FLIP_Y_WEBGL = false globally so MediaPipe's shared GL context
+    // behaves identically across every browser. We handle texture Y-coords cleanly in GLSL.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 
     const VS_QUAD = `#version 300 es
     precision highp float;
@@ -986,26 +986,27 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Mask Pass 1 & 2: Un-pad square mask + 3x3 Morphological Closing (Dilate -> Erode)
-    // Closes gaps inside dark clothes, arms, and hands cleanly.
+    // Mask Pass 1 & 2: Morphological Closing (3x3 Dilate -> 3x3 Erode)
+    // Pass 1 flips Y from MediaPipe's top-down texture into WebGL bottom-up FBO coords.
     const FS_MASK_MORPH = `#version 300 es
     precision highp float;
     in vec2 vUv;
     out vec4 fragColor;
 
     uniform sampler2D uMaskIn;
-    uniform vec4 uRect;    // (uMin, vMin, uMax, vMax)
     uniform vec2 uStep;
-    uniform float uMode;   // 0.0 = 3x3 Dilate (Max), 1.0 = 3x3 Erode (Min)
+    uniform float uMode;   // 0.0 = Dilate from MediaPipe tex (flip Y), 1.0 = Erode from FBO
+    uniform float uInvert; // 1.0 when input is background confidence (1.0 - bg = person)
 
     void main() {
-      vec2 baseUv = mix(uRect.xy, uRect.zw, vUv);
+      vec2 baseUv = uMode < 0.5 ? vec2(vUv.x, 1.0 - vUv.y) : vUv;
       float val = uMode < 0.5 ? 0.0 : 1.0;
 
       for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
-          vec2 sUv = clamp(baseUv + vec2(float(x), float(y)) * uStep, uRect.xy, uRect.zw);
+          vec2 sUv = clamp(baseUv + vec2(float(x), float(y)) * uStep, 0.0, 1.0);
           float s = texture(uMaskIn, sUv).r;
+          if (uMode < 0.5 && uInvert > 0.5) s = 1.0 - s;
           val = uMode < 0.5 ? max(val, s) : min(val, s);
         }
       }
@@ -1032,7 +1033,6 @@
       float prev = texture(uPrevMask, vUv).r;
       float diff = abs(curr - prev);
 
-      // Immediate attack on body movement so live foreground never lags behind
       float speed = curr > prev
         ? mix(0.74, 0.99, smoothstep(0.02, 0.14, diff))
         : mix(0.32, 0.96, smoothstep(0.05, 0.22, diff));
@@ -1041,7 +1041,7 @@
       fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
     }`;
 
-    // Mask Pass 4 & 5: Separable 9-tap Gaussian blur + clean edge feathering
+    // Mask Pass 4 & 5: 5-tap separable smooth blur (fast on mobile) + clean threshold
     const FS_MASK_BLUR = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1053,15 +1053,11 @@
     uniform float uThresh;
 
     void main() {
-      float sum = texture(uMaskIn, vUv).r * 0.2270270;
-      sum += texture(uMaskIn, vUv + uStep * 1.0).r * 0.1945946;
-      sum += texture(uMaskIn, vUv - uStep * 1.0).r * 0.1945946;
-      sum += texture(uMaskIn, vUv + uStep * 2.0).r * 0.1216216;
-      sum += texture(uMaskIn, vUv - uStep * 2.0).r * 0.1216216;
-      sum += texture(uMaskIn, vUv + uStep * 3.0).r * 0.0540541;
-      sum += texture(uMaskIn, vUv - uStep * 3.0).r * 0.0540541;
-      sum += texture(uMaskIn, vUv + uStep * 4.0).r * 0.0162162;
-      sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
+      float sum = texture(uMaskIn, vUv).r * 0.2941176;
+      sum += texture(uMaskIn, vUv + uStep * 1.2).r * 0.2352941;
+      sum += texture(uMaskIn, vUv - uStep * 1.2).r * 0.2352941;
+      sum += texture(uMaskIn, vUv + uStep * 2.6).r * 0.1176471;
+      sum += texture(uMaskIn, vUv - uStep * 2.6).r * 0.1176471;
 
       if (uFinalPass > 0.5) {
         float feather = 0.10;
@@ -1071,7 +1067,6 @@
     }`;
 
     // Mask Pass 6: Dilated Live Occlusion Matte (+2.5px border guard)
-    // Ensures trailing clones NEVER peek out or bleed through live edges.
     const FS_MASK_OCC = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1093,7 +1088,24 @@
       fragColor = vec4(m, m, m, 1.0);
     }`;
 
-    // Real camera background shader
+    // GPU 16x16 Motion Delta shader (used with non-blocking async PBO)
+    const FS_MOTION = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uCurr;
+    uniform sampler2D uPrev;
+
+    void main() {
+      float c = texture(uCurr, vUv).r;
+      float p = texture(uPrev, vUv).r;
+      float d = abs(c - p);
+      d = d > 0.12 ? d : 0.0;
+      fragColor = vec4(d, 0.0, 0.0, 1.0);
+    }`;
+
+    // Real camera background shader (flips Y for videoTex)
     const FS_BG = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1111,15 +1123,15 @@
         return;
       }
 
-      vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
-      if (uMirror > 0.5) uv.x = 1.0 - uv.x;
+      vec2 screenUv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) screenUv.x = 1.0 - screenUv.x;
 
-      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+      if (screenUv.x < 0.0 || screenUv.x > 1.0 || screenUv.y < 0.0 || screenUv.y > 1.0) {
         fragColor = vec4(0.03, 0.04, 0.06, 1.0);
         return;
       }
 
-      vec3 vid = texture(uVideoTex, uv).rgb;
+      vec3 vid = texture(uVideoTex, vec2(screenUv.x, 1.0 - screenUv.y)).rgb;
 
       if (uBgMode == 1) {
         fragColor = vec4(vid * 0.48, 1.0);
@@ -1136,7 +1148,7 @@
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: solid opaque interior on live foreground, soft premultiplied edge on clones
+    // Cutout shader: reads videoTex (top-down) and maskFinal (WebGL bottom-up)
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1149,15 +1161,15 @@
     uniform float uIsLive;
 
     void main() {
-      vec2 uv = (vUv - 0.5) * uUvScale + 0.5;
-      if (uMirror > 0.5) uv.x = 1.0 - uv.x;
+      vec2 screenUv = (vUv - 0.5) * uUvScale + 0.5;
+      if (uMirror > 0.5) screenUv.x = 1.0 - screenUv.x;
 
-      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+      if (screenUv.x < 0.0 || screenUv.x > 1.0 || screenUv.y < 0.0 || screenUv.y > 1.0) {
         fragColor = vec4(0.0);
         return;
       }
 
-      float rawAlpha = texture(uMaskTex, uv).r;
+      float rawAlpha = texture(uMaskTex, screenUv).r;
       float alpha = uIsLive > 0.5 ? smoothstep(0.04, 0.34, rawAlpha) : rawAlpha;
 
       if (alpha < 0.015) {
@@ -1165,11 +1177,11 @@
         return;
       }
 
-      vec3 rgb = texture(uVideoTex, uv).rgb;
+      vec3 rgb = texture(uVideoTex, vec2(screenUv.x, 1.0 - screenUv.y)).rgb;
       fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone shader: strictly occluded behind live person using dilated live occlusion matte
+    // Clone shader: strictly occluded behind live person
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1234,7 +1246,6 @@
       float a = tex.a;
       if (a < 0.015) discard;
 
-      // Dilated live-person occlusion: clones can NEVER overlap or bleed onto live self
       vec2 liveUv = (vUv - 0.5) * uUvScale + 0.5;
       if (uMirror > 0.5) liveUv.x = 1.0 - liveUv.x;
       float liveOcclusion = 0.0;
@@ -1289,7 +1300,7 @@
     }
 
     const pMaskMorph = createProgram(VS_QUAD, FS_MASK_MORPH, [
-      "uMaskIn", "uRect", "uStep", "uMode"
+      "uMaskIn", "uStep", "uMode", "uInvert"
     ]);
     const pMaskTemporal = createProgram(VS_QUAD, FS_MASK_TEMPORAL, [
       "uCurrMask", "uPrevMask", "uHasHistory"
@@ -1299,6 +1310,9 @@
     ]);
     const pMaskOcc = createProgram(VS_QUAD, FS_MASK_OCC, [
       "uMaskIn", "uStep"
+    ]);
+    const pMotion = createProgram(VS_QUAD, FS_MOTION, [
+      "uCurr", "uPrev"
     ]);
     const pBg = createProgram(VS_QUAD, FS_BG, [
       "uVideoTex", "uUvScale", "uMirror", "uBgMode", "uHasSource"
@@ -1336,9 +1350,6 @@
       const fbo = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-        console.warn("Framebuffer incomplete:", w, h);
-      }
       return { fbo, tex };
     }
 
@@ -1349,15 +1360,14 @@
     }
 
     const videoTex = createLinearTex();
-    const maskRawTex = createLinearTex();
 
     // =========================================================================
-    // 5. FBO Pools (Mask Refinement + Trail Ring Buffer)
+    // 5. FBO Pools + Async Non-Blocking PBO Motion Detector
     // =========================================================================
-    let trailW = 640;
+    let trailW = 480;
     let trailH = 360;
-    let maskFboW = 384;
-    let maskFboH = 216;
+    let maskFboW = 256;
+    let maskFboH = 192;
     const fboPool = [];
 
     let maskMorphA = null;
@@ -1367,6 +1377,68 @@
     let maskFinal = null;
     let maskLiveOcc = null;
 
+    // 16x16 GPU motion delta + async PBO
+    const MOTION_DIM = 16;
+    const motionFbo = createFbo(MOTION_DIM, MOTION_DIM);
+    const motionPbo = gl.createBuffer();
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, motionPbo);
+    gl.bufferData(gl.PIXEL_PACK_BUFFER, MOTION_DIM * MOTION_DIM * 4, gl.STREAM_READ);
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    const motionBytes = new Uint8Array(MOTION_DIM * MOTION_DIM * 4);
+    let motionSync = null;
+
+    function pollAsyncMotion() {
+      if (!motionSync) return;
+      try {
+        const status = gl.clientWaitSync(motionSync, 0, 0);
+        if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+          gl.deleteSync(motionSync);
+          motionSync = null;
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, motionPbo);
+          gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, motionBytes);
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+          let sum = 0;
+          for (let i = 0; i < motionBytes.length; i += 4) {
+            sum += motionBytes[i];
+          }
+          const avg = sum / (MOTION_DIM * MOTION_DIM * 255);
+          state.motionLevel = Math.min(1.0, avg * 18.0);
+        }
+      } catch {
+        if (motionSync) {
+          try { gl.deleteSync(motionSync); } catch {}
+          motionSync = null;
+        }
+        state.motionLevel = 1.0;
+      }
+    }
+
+    function queueAsyncMotion(currTex, prevTex) {
+      if (motionSync || state.motionPct === 0) return;
+      try {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, motionFbo.fbo);
+        gl.viewport(0, 0, MOTION_DIM, MOTION_DIM);
+        gl.disable(gl.BLEND);
+        gl.useProgram(pMotion.prog);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, currTex);
+        gl.uniform1i(pMotion.u.uCurr, 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, prevTex);
+        gl.uniform1i(pMotion.u.uPrev, 1);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, motionPbo);
+        gl.readPixels(0, 0, MOTION_DIM, MOTION_DIM, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        motionSync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      } catch {
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        state.motionLevel = 1.0;
+      }
+    }
+
     function rebuildMaskFbos(srcW = 640, srcH = 480) {
       destroyFbo(maskMorphA);
       destroyFbo(maskMorphB);
@@ -1375,7 +1447,7 @@
       destroyFbo(maskFinal);
       destroyFbo(maskLiveOcc);
 
-      const maxMaskDim = state.eco ? 256 : 384;
+      const maxMaskDim = state.eco ? 192 : 320;
       const aspect = srcW / Math.max(1, srcH);
       if (aspect >= 1) {
         maskFboW = maxMaskDim;
@@ -1400,7 +1472,7 @@
       fboPool.forEach(destroyFbo);
       fboPool.length = 0;
 
-      const maxDim = state.eco ? 520 : (isLikelyMobile ? 680 : 920);
+      const maxDim = state.eco ? 420 : (isLikelyMobile ? 520 : 880);
       const aspect = canvas.width / Math.max(1, canvas.height);
       if (aspect >= 1) {
         trailW = maxDim;
@@ -1440,7 +1512,7 @@
     }
 
     function resizeCanvas() {
-      const dpr = Math.min(window.devicePixelRatio || 1, state.eco ? 1.25 : 2.0);
+      const dpr = state.eco ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.75);
       const w = Math.max(1, Math.floor(window.innerWidth * dpr));
       const h = Math.max(1, Math.floor(window.innerHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) {
@@ -1456,22 +1528,11 @@
     resizeCanvas();
 
     // =========================================================================
-    // 6. Square Aspect-Preserving Segmentation Canvas & Demo Silhouette
+    // 6. Demo Silhouette Canvas
     // =========================================================================
-    const SEG_SIZE = 256;
-    const segCanvas = document.createElement("canvas");
-    segCanvas.width = SEG_SIZE;
-    segCanvas.height = SEG_SIZE;
-    const segCtx = segCanvas.getContext("2d", { willReadFrequently: false });
-
-    let maskBytes = null;
-    let maskW = 0;
-    let maskH = 0;
-    let lastMaskSrcAspect = 0;
-
     const demoCanvas = document.createElement("canvas");
-    demoCanvas.width = 640;
-    demoCanvas.height = 480;
+    demoCanvas.width = 480;
+    demoCanvas.height = 360;
     const demoCtx = demoCanvas.getContext("2d");
 
     function renderDemoFrame(tSec) {
@@ -1495,12 +1556,12 @@
       const x = w * 0.14 + Math.sin(cycle * Math.PI * 2) * (w * 0.34) + w * 0.36;
       const dir = Math.cos(cycle * Math.PI * 2) >= 0 ? 1 : -1;
       const stride = Math.sin(tSec * 7.5);
-      const bob = Math.abs(Math.cos(tSec * 7.5)) * 10;
+      const bob = Math.abs(Math.cos(tSec * 7.5)) * 8;
       const baseY = h * 0.86 - bob;
 
       demoCtx.save();
       demoCtx.translate(x, baseY);
-      demoCtx.scale(dir, 1);
+      demoCtx.scale(dir * 0.75, 0.75);
 
       demoCtx.lineCap = "round";
       demoCtx.strokeStyle = "#222831";
@@ -1562,17 +1623,20 @@
     }
 
     // =========================================================================
-    // 7. MediaPipe ImageSegmenter Setup (Multiclass Full-Body + Fast Fallback)
+    // 7. MediaPipe ImageSegmenter Setup (Shared Canvas Zero-Copy GPU Mode)
     // =========================================================================
     let visionTasks = null;
     let imageSegmenter = null;
     let isSwitchingModel = false;
+    let lastMaskSrcAspect = 0;
 
     const MODELS = {
-      multiclass:
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite",
+      turbo:
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite",
       fast:
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite"
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+      multiclass:
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite"
     };
 
     async function createSegmenterWithModel(modelKey) {
@@ -1582,10 +1646,11 @@
         );
       }
 
-      const url = MODELS[modelKey] || MODELS.fast;
+      const url = MODELS[modelKey] || MODELS.turbo;
       try {
         return await ImageSegmenter.createFromOptions(visionTasks, {
           baseOptions: { modelAssetPath: url, delegate: "GPU" },
+          canvas: canvas, // Shares our WebGL2 context for zero-copy GPU textures!
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
@@ -1594,6 +1659,7 @@
         console.warn("GPU delegate failed, falling back to CPU:", gpuErr);
         return await ImageSegmenter.createFromOptions(visionTasks, {
           baseOptions: { modelAssetPath: url, delegate: "CPU" },
+          canvas: canvas,
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
@@ -1605,9 +1671,7 @@
       isSwitchingModel = true;
       state.segmenterReady = false;
       statusDot.className = "status-dot";
-      statusText.textContent = modelKey === "multiclass"
-        ? "LOADING FULL-BODY AI..."
-        : "LOADING FAST AI...";
+      statusText.textContent = "LOADING AI MODEL...";
 
       const oldSeg = imageSegmenter;
       imageSegmenter = null;
@@ -1619,11 +1683,11 @@
         imageSegmenter = await createSegmenterWithModel(modelKey);
         state.modelType = modelKey;
       } catch (err) {
-        if (modelKey === "multiclass") {
-          console.warn("Multiclass failed, falling back to fast model:", err);
-          imageSegmenter = await createSegmenterWithModel("fast");
-          state.modelType = "fast";
-          optModel.value = "fast";
+        if (modelKey !== "turbo") {
+          console.warn("Falling back to turbo model:", err);
+          imageSegmenter = await createSegmenterWithModel("turbo");
+          state.modelType = "turbo";
+          optModel.value = "turbo";
         } else {
           throw err;
         }
@@ -1633,7 +1697,6 @@
 
       state.segmenterReady = true;
       state.hasMaskHistory = false;
-      state.prevMaskSample = null;
       updateStatusHUD();
     }
 
@@ -1646,7 +1709,9 @@
         statusText.textContent = "DEMO MODE";
       } else if (state.cameraReady) {
         statusDot.className = "status-dot live";
-        statusText.textContent = state.modelType === "multiclass" ? "FULL-BODY LOCK" : "FAST OPTICS";
+        statusText.textContent =
+          state.modelType === "multiclass" ? "FULL-BODY HD" :
+          state.modelType === "fast" ? "SELFIE HD" : "TURBO GPU";
       } else {
         statusDot.className = "status-dot";
         statusText.textContent = "AWAITING CAMERA";
@@ -1667,8 +1732,8 @@
       state.demoMode = false;
       state.lastVideoTime = -1;
       state.hasMaskHistory = false;
-      state.prevMaskSample = null;
 
+      // Mobile cameras run faster and cooler at 640x480 / 720p
       const idealW = state.eco ? 640 : 1280;
       const idealH = state.eco ? 480 : 720;
 
@@ -1678,7 +1743,7 @@
           facingMode: { ideal: state.facingMode },
           width: { ideal: idealW },
           height: { ideal: idealH },
-          frameRate: { ideal: 30, max: 60 }
+          frameRate: { ideal: 30, max: 30 }
         }
       });
 
@@ -1704,7 +1769,6 @@
       state.demoMode = true;
       state.mirror = false;
       state.hasMaskHistory = false;
-      state.prevMaskSample = null;
       optMirror.checked = false;
       startupOverlay.classList.add("hidden");
       clearAllTrails(false);
@@ -1713,34 +1777,52 @@
     }
 
     // =========================================================================
-    // 9. Segmentation + GPU 6-Pass Mask Refinement Pipeline
+    // 9. Zero-Copy GPU Segmentation & Mask Refinement
     // =========================================================================
-    function refineMaskOnGpu() {
+    function restoreGlState() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      gl.bindVertexArray(quadVao);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.disable(gl.CULL_FACE);
+      gl.disable(gl.DEPTH_TEST);
+      gl.disable(gl.STENCIL_TEST);
+      gl.colorMask(true, true, true, true);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    }
+
+    function refineMaskOnGpu(mpMaskTex, mpMaskW, mpMaskH, invertBgMask) {
       gl.bindVertexArray(quadVao);
       gl.disable(gl.BLEND);
       gl.viewport(0, 0, maskFboW, maskFboH);
 
-      const [uMin, vMin, uMax, vMax] = state.maskRect;
-
-      // Pass 1: Un-pad square mask + 3x3 Dilation (closes gaps in limbs/clothing)
+      // Pass 1: Flip MediaPipe top-down texture + 3x3 Dilation
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskMorphA.fbo);
       gl.useProgram(pMaskMorph.prog);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
+      gl.bindTexture(gl.TEXTURE_2D, mpMaskTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
       gl.uniform1i(pMaskMorph.u.uMaskIn, 0);
-      gl.uniform4f(pMaskMorph.u.uRect, uMin, vMin, uMax, vMax);
-      gl.uniform2f(pMaskMorph.u.uStep, 1.0 / maskW, 1.0 / maskH);
+      gl.uniform2f(pMaskMorph.u.uStep, 1.0 / Math.max(1, mpMaskW), 1.0 / Math.max(1, mpMaskH));
       gl.uniform1f(pMaskMorph.u.uMode, 0.0);
+      gl.uniform1f(pMaskMorph.u.uInvert, invertBgMask ? 1.0 : 0.0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 2: 3x3 Erosion (restores true silhouette boundary without reopening gaps)
+      // Pass 2: 3x3 Erosion (restores true silhouette boundary without holes)
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskMorphB.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskMorphA.tex);
       gl.uniform1i(pMaskMorph.u.uMaskIn, 0);
-      gl.uniform4f(pMaskMorph.u.uRect, 0.0, 0.0, 1.0, 1.0);
       gl.uniform2f(pMaskMorph.u.uStep, 0.85 / maskFboW, 0.85 / maskFboH);
       gl.uniform1f(pMaskMorph.u.uMode, 1.0);
+      gl.uniform1f(pMaskMorph.u.uInvert, 0.0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
       // Pass 3: Fast-attack temporal stabilization
@@ -1759,10 +1841,14 @@
       gl.uniform1f(pMaskTemporal.u.uHasHistory, state.hasMaskHistory ? 1.0 : 0.0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+      if (state.hasMaskHistory) {
+        queueAsyncMotion(maskHist[writeIdx].tex, maskHist[readIdx].tex);
+      }
+
       state.hasMaskHistory = true;
       state.histWriteIdx = readIdx;
 
-      // Pass 4: Horizontal 9-tap Gaussian blur
+      // Pass 4: Horizontal 5-tap smooth blur
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskBlurTemp.fbo);
       gl.useProgram(pMaskBlur.prog);
       gl.activeTexture(gl.TEXTURE0);
@@ -1773,7 +1859,7 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 5: Vertical 9-tap Gaussian blur + clean edge feathering -> maskFinal
+      // Pass 5: Vertical 5-tap smooth blur + edge feathering -> maskFinal
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
@@ -1783,7 +1869,7 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 6: Dilated live occlusion matte (+2.5px border guard) -> maskLiveOcc
+      // Pass 6: Dilated live occlusion matte (+2.5px guard) -> maskLiveOcc
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskLiveOcc.fbo);
       gl.useProgram(pMaskOcc.prog);
       gl.activeTexture(gl.TEXTURE0);
@@ -1804,82 +1890,30 @@
         rebuildMaskFbos(srcW, srcH);
       }
 
-      // Fit video into 256x256 square preserving true body aspect ratio (no squishing!)
-      const fitScale = SEG_SIZE / Math.max(srcW, srcH);
-      const drawW = Math.round(srcW * fitScale);
-      const drawH = Math.round(srcH * fitScale);
-      const offX = Math.floor((SEG_SIZE - drawW) / 2);
-      const offY = Math.floor((SEG_SIZE - drawH) / 2);
-
-      state.maskRect = [
-        offX / SEG_SIZE,
-        1.0 - (offY + drawH) / SEG_SIZE,
-        (offX + drawW) / SEG_SIZE,
-        1.0 - offY / SEG_SIZE
-      ];
-
-      segCtx.fillStyle = "#000000";
-      segCtx.fillRect(0, 0, SEG_SIZE, SEG_SIZE);
-      segCtx.drawImage(sourceEl, offX, offY, drawW, drawH);
-
       const ts = Math.max(state.lastSegTimestamp + 1, Math.floor(nowMs));
       state.lastSegTimestamp = ts;
 
       let result = null;
       try {
-        result = imageSegmenter.segmentForVideo(segCanvas, ts);
+        // Pass <video> or demoCanvas directly — ZERO 2D canvas copy!
+        result = imageSegmenter.segmentForVideo(sourceEl, ts);
+        restoreGlState();
+
         const masks = result.confidenceMasks;
         if (!masks || masks.length === 0) return;
 
-        // Index 0 is Background confidence for both selfie_multiclass & selfie_segmenter.
-        // Using (1.0 - backgroundConfidence) captures hair + face + skin + clothes + body as one unified person mask.
-        const bgFloats = masks[0].getAsFloat32Array();
-        const mw = masks[0].width;
-        const mh = masks[0].height;
+        // Keep mask texture strictly on GPU (ZERO readPixels / Float32Array stall!)
+        const bgMask = masks[0];
+        const mpTex = bgMask.getAsWebGLTexture();
+        const invertBg = masks.length > 1;
 
-        if (!maskBytes || maskW !== mw || maskH !== mh) {
-          maskW = mw;
-          maskH = mh;
-          maskBytes = new Uint8Array(maskW * maskH);
-        }
-
-        const len = bgFloats.length;
-        for (let i = 0; i < len; i++) {
-          const personConf = 1.0 - bgFloats[i];
-          maskBytes[i] = personConf <= 0 ? 0 : personConf >= 1 ? 255 : (personConf * 255) | 0;
-        }
-
-        // Subsampled noise-gated motion check inside active video region
-        const stride = 20;
-        const sampleCount = Math.ceil(len / stride);
-        if (!state.prevMaskSample || state.prevMaskSample.length !== sampleCount) {
-          state.prevMaskSample = new Float32Array(sampleCount);
-          for (let i = 0, j = 0; i < len; i += stride, j++) {
-            state.prevMaskSample[j] = 1.0 - bgFloats[i];
-          }
-          state.motionLevel = 1.0;
-        } else {
-          let diffSum = 0;
-          for (let i = 0, j = 0; i < len; i += stride, j++) {
-            const p = 1.0 - bgFloats[i];
-            const d = Math.abs(p - state.prevMaskSample[j]);
-            if (d > 0.12) diffSum += d;
-            state.prevMaskSample[j] = p;
-          }
-          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 20.0);
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, maskW, maskH, 0, gl.RED, gl.UNSIGNED_BYTE, maskBytes);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+        refineMaskOnGpu(mpTex, bgMask.width, bgMask.height, invertBg);
 
         for (let i = 0; i < masks.length; i++) {
           masks[i].close();
         }
-
-        refineMaskOnGpu();
       } catch (err) {
+        restoreGlState();
         console.warn("Segmentation frame skipped:", err);
       } finally {
         if (result) {
@@ -1902,8 +1936,16 @@
       return [canvasAspect / srcAspect, 1.0];
     }
 
+    let lastRenderTime = 0;
+
     function renderFrame(nowMs) {
       requestAnimationFrame(renderFrame);
+
+      // On 120Hz mobile screens, cap visual loop at ~33ms (~30-60 FPS sweet spot) in Eco mode
+      if (state.eco && nowMs - lastRenderTime < 22) return;
+      lastRenderTime = nowMs;
+
+      pollAsyncMotion();
 
       state.fpsFrames++;
       if (nowMs - state.fpsLastTime >= 500) {
@@ -1942,6 +1984,7 @@
 
       if (sourceEl && hasNewFrame) {
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceEl);
         runSegmentation(sourceEl, srcW, srcH, nowMs);
@@ -2006,7 +2049,7 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Render Clones Oldest -> Newest (occluded strictly behind live user via maskLiveOcc)
+        // 2) Render Clones Oldest -> Newest (occluded strictly behind live user)
         gl.useProgram(pClone.prog);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, maskLiveOcc.tex);
@@ -2221,7 +2264,7 @@
     (async function boot() {
       requestAnimationFrame(renderFrame);
       try {
-        await loadSegmenter("multiclass");
+        await loadSegmenter(state.modelType);
       } catch (err) {
         console.error("MediaPipe init error:", err);
         statusDot.className = "status-dot error";
