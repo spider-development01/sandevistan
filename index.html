@@ -572,9 +572,9 @@
     <div class="control-group">
       <div class="control-label">
         <span>Capture Spacing</span>
-        <span class="control-val" id="valInterval">40 ms</span>
+        <span class="control-val" id="valInterval">44 ms</span>
       </div>
-      <input type="range" id="optInterval" min="16" max="150" step="2" value="40" />
+      <input type="range" id="optInterval" min="16" max="150" step="2" value="44" />
     </div>
 
     <div class="control-group">
@@ -596,9 +596,9 @@
     <div class="control-group" style="margin-top: 8px;">
       <div class="control-label">
         <span>Motion Threshold</span>
-        <span class="control-val" id="valMotion">10%</span>
+        <span class="control-val" id="valMotion">12%</span>
       </div>
-      <input type="range" id="optMotion" min="0" max="60" step="1" value="10" />
+      <input type="range" id="optMotion" min="0" max="60" step="1" value="12" />
     </div>
 
     <div class="control-group">
@@ -628,14 +628,14 @@
     <div class="control-group">
       <div class="control-label">
         <span>Clone Opacity</span>
-        <span class="control-val" id="valOpacity">90%</span>
+        <span class="control-val" id="valOpacity">96%</span>
       </div>
-      <input type="range" id="optOpacity" min="30" max="100" step="2" value="90" />
+      <input type="range" id="optOpacity" min="30" max="100" step="2" value="96" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
-        <span>Mask Cutoff</span>
+        <span>Background Rejection (Cutoff)</span>
         <span class="control-val" id="valThresh">0.54</span>
       </div>
       <input type="range" id="optThresh" min="0.30" max="0.80" step="0.02" value="0.54" />
@@ -644,9 +644,9 @@
     <div class="control-group">
       <div class="control-label">
         <span>Edge Feather Smoothness</span>
-        <span class="control-val" id="valSmooth">1.0</span>
+        <span class="control-val" id="valSmooth">0.9</span>
       </div>
-      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.0" />
+      <input type="range" id="optSmooth" min="0.3" max="2.2" step="0.1" value="0.9" />
     </div>
 
     <div class="control-group">
@@ -695,7 +695,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Allow camera access to track your movement and render smooth chromatic after-trails behind you.
+        Allow camera access to track your movement and render crisp chromatic after-trails behind you.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -717,16 +717,16 @@
 
     const state = {
       maxSlots: 42,
-      clones: isLikelyMobile ? 16 : 24,
-      intervalMs: isLikelyMobile ? 42 : 38,
+      clones: isLikelyMobile ? 16 : 22,
+      intervalMs: isLikelyMobile ? 46 : 42,
       decaySec: 1.5,
       infinite: false,
-      motionPct: 10,
+      motionPct: 12,
       palette: 0,
       bgMode: 0,
-      cloneOpacity: 0.90,
+      cloneOpacity: 0.96,
       threshold: 0.54,
-      smoothRadius: 1.0,
+      smoothRadius: 0.9,
       fitContain: false,
       mirror: true,
       eco: isLikelyMobile,
@@ -950,7 +950,7 @@
     syncAudioSettings();
 
     // =========================================================================
-    // 4. WebGL2 Initialization (Clean Consistent UNPACK_FLIP_Y_WEBGL = true)
+    // 4. WebGL2 Initialization
     // =========================================================================
     const gl = canvas.getContext("webgl2", {
       alpha: false,
@@ -977,7 +977,7 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Mask Pass 1: Fast-attack temporal stabilizer (zero edge jitter, zero lag on movement)
+    // Mask Pass 1: Fast-attack temporal stabilizer
     const FS_MASK_TEMPORAL = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -996,16 +996,15 @@
       float prev = texture(uPrevMask, vUv).r;
       float diff = abs(curr - prev);
 
-      // Fast attack when entering pixels so live body never lags; gentle release on jitter
-      float speed = curr > prev
-        ? mix(0.86, 1.0, smoothstep(0.02, 0.14, diff))
-        : mix(0.30, 0.96, smoothstep(0.06, 0.24, diff));
-
+      // 100% instant attack when entering pixels so live body never lags behind
+      float speed = curr >= prev ? 1.0 : mix(0.32, 0.96, smoothstep(0.06, 0.22, diff));
       float stabilized = mix(prev, curr, speed);
       fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
     }`;
 
-    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + clean edge feather
+    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + dual-channel alpha output
+    // .r = Strict clone cutoff (zero wall tinting)
+    // .g = Solid live body & clone occlusion (zero bleed-through, zero boundary gap)
     const FS_MASK_BLUR = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1028,10 +1027,14 @@
       sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
 
       if (uFinalPass > 0.5) {
-        float feather = 0.12;
-        sum = smoothstep(uThresh - feather, uThresh + feather, sum);
+        float cloneAlpha = smoothstep(uThresh - 0.10, uThresh + 0.10, sum);
+        float liveLow = max(0.10, uThresh - 0.24);
+        float liveHigh = max(0.26, uThresh - 0.04);
+        float liveAlpha = smoothstep(liveLow, liveHigh, sum);
+        fragColor = vec4(cloneAlpha, liveAlpha, sum, 1.0);
+      } else {
+        fragColor = vec4(sum, sum, sum, 1.0);
       }
-      fragColor = vec4(sum, sum, sum, 1.0);
     }`;
 
     // Real camera background shader
@@ -1077,7 +1080,7 @@
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: clean premultiplied alpha for clones & solid interior for live self
+    // Cutout shader: reads .r for clone capture, .g for solid live foreground
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1098,10 +1101,8 @@
         return;
       }
 
-      float rawAlpha = texture(uMaskTex, uv).r;
-      // Live foreground hits solid 1.0 across interior without pushing boundary outward
-      float alpha = uIsLive > 0.5 ? smoothstep(0.06, 0.48, rawAlpha) : rawAlpha;
-
+      vec2 m = texture(uMaskTex, uv).rg;
+      float alpha = uIsLive > 0.5 ? m.g : m.r;
       if (alpha < 0.015) {
         fragColor = vec4(0.0);
         return;
@@ -1111,7 +1112,7 @@
       fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone shader: smooth photographic tinting + interior live occlusion (no boundary moat)
+    // Clone shader: uses exact same .g liveAlpha for 100% locked behind-body occlusion
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1176,13 +1177,12 @@
       float a = tex.a;
       if (a < 0.015) discard;
 
-      // Soft interior occlusion: erases clones strictly behind live body with zero outer gap
+      // Exact matched live-alpha occlusion: 0% gap/halo, 100% blocked behind live body
       vec2 liveUv = (vUv - 0.5) * uUvScale + 0.5;
       if (uMirror > 0.5) liveUv.x = 1.0 - liveUv.x;
       float occ = 0.0;
       if (liveUv.x >= 0.0 && liveUv.x <= 1.0 && liveUv.y >= 0.0 && liveUv.y <= 1.0) {
-        float liveMask = texture(uLiveMaskTex, liveUv).r;
-        occ = smoothstep(0.22, 0.68, liveMask);
+        occ = texture(uLiveMaskTex, liveUv).g;
       }
       if (occ >= 0.995) discard;
 
@@ -1285,7 +1285,7 @@
     const maskRawTex = createLinearTex();
 
     // =========================================================================
-    // 5. FBO Pools (3-Pass Smooth Mask + Trail Ring Buffer)
+    // 5. FBO Pools (3-Pass Dual-Alpha Mask + Trail Ring Buffer)
     // =========================================================================
     let trailW = 480;
     let trailH = 360;
@@ -1484,7 +1484,7 @@
     }
 
     // =========================================================================
-    // 7. MediaPipe ImageSegmenter Setup (Clean, Fast Selfie Segmenter float16)
+    // 7. MediaPipe ImageSegmenter Setup
     // =========================================================================
     let imageSegmenter = null;
 
@@ -1595,14 +1595,14 @@
     }
 
     // =========================================================================
-    // 9. Segmentation + GPU 3-Pass Smooth Mask Refinement
+    // 9. Segmentation + GPU 3-Pass Dual-Alpha Mask Refinement
     // =========================================================================
     function refineMaskOnGpu() {
       gl.bindVertexArray(quadVao);
       gl.disable(gl.BLEND);
       gl.viewport(0, 0, maskFboW, maskFboH);
 
-      // Pass 1: Temporal stabilization
+      // Pass 1: Fast-attack temporal stabilization
       const writeIdx = state.histWriteIdx;
       const readIdx = 1 - writeIdx;
 
@@ -1632,7 +1632,7 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Pass 3: Vertical 9-tap Gaussian blur + clean edge feather -> maskFinal
+      // Pass 3: Vertical 9-tap Gaussian blur + Dual-Alpha output -> maskFinal
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
@@ -1712,6 +1712,7 @@
         }
 
         gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, maskW, maskH, 0, gl.RED, gl.UNSIGNED_BYTE, maskBytes);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
@@ -1797,6 +1798,7 @@
 
       if (sourceEl && hasNewFrame) {
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceEl);
         runSegmentation(sourceEl, srcW, srcH, nowMs);
@@ -1807,7 +1809,7 @@
 
       gl.bindVertexArray(quadVao);
 
-      // Capture into trail FBO ring buffer
+      // Capture into trail FBO ring buffer (uses strict maskFinal.r)
       if (
         sourceEl &&
         state.hasMaskHistory &&
@@ -1861,7 +1863,7 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Render Clones Oldest -> Newest (occluded cleanly behind live interior)
+        // 2) Render Clones Oldest -> Newest (occluded cleanly via maskFinal.g)
         gl.useProgram(pClone.prog);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
@@ -1886,11 +1888,11 @@
               continue;
             }
             const progress = elapsed / decayMs;
-            timeFade = 1.0 - Math.pow(progress, 2.4);
+            timeFade = 1.0 - Math.pow(progress, 3.0);
           }
 
           const ageNorm = (k - 1) / Math.max(1, count - 1);
-          const alpha = Math.max(0.0, timeFade * state.cloneOpacity * (1.0 - ageNorm * 0.28));
+          const alpha = Math.max(0.0, timeFade * state.cloneOpacity * (1.0 - ageNorm * 0.16));
 
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, slot.tex);
@@ -1900,7 +1902,7 @@
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
-        // 3) Render Solid Live Foreground Person Strictly on Top
+        // 3) Render Solid Live Foreground Person Strictly on Top (uses maskFinal.g)
         gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
