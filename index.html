@@ -206,7 +206,7 @@
       bottom: calc(70px + var(--safe-bottom));
       z-index: 29;
       width: min(350px, calc(100vw - 32px));
-      max-height: min(68dvh, 560px);
+      max-height: min(68dvh, 580px);
       overflow-y: auto;
       overscroll-behavior: contain;
       background: var(--panel-bg);
@@ -563,6 +563,16 @@
 
     <div class="control-group">
       <div class="control-label">
+        <span>Body Tracking Model</span>
+      </div>
+      <select id="optModel">
+        <option value="multiclass" selected>Full-Body High Precision (Recommended)</option>
+        <option value="fast">Lightweight Selfie (High FPS / Older Phones)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
         <span>Trail Clones</span>
         <span class="control-val" id="valClones">24</span>
       </div>
@@ -596,9 +606,9 @@
     <div class="control-group" style="margin-top: 8px;">
       <div class="control-label">
         <span>Motion Threshold</span>
-        <span class="control-val" id="valMotion">12%</span>
+        <span class="control-val" id="valMotion">10%</span>
       </div>
-      <input type="range" id="optMotion" min="0" max="80" step="1" value="12" />
+      <input type="range" id="optMotion" min="0" max="80" step="1" value="10" />
     </div>
 
     <div class="control-group">
@@ -636,17 +646,17 @@
     <div class="control-group">
       <div class="control-label">
         <span>Mask Cutoff</span>
-        <span class="control-val" id="valThresh">0.54</span>
+        <span class="control-val" id="valThresh">0.46</span>
       </div>
-      <input type="range" id="optThresh" min="0.25" max="0.85" step="0.02" value="0.54" />
+      <input type="range" id="optThresh" min="0.20" max="0.80" step="0.02" value="0.46" />
     </div>
 
     <div class="control-group">
       <div class="control-label">
         <span>Edge Feather Smoothness</span>
-        <span class="control-val" id="valSmooth">1.1</span>
+        <span class="control-val" id="valSmooth">1.0</span>
       </div>
-      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.1" />
+      <input type="range" id="optSmooth" min="0.4" max="2.4" step="0.1" value="1.0" />
     </div>
 
     <div class="control-group">
@@ -666,7 +676,7 @@
     </div>
 
     <div class="toggle-row">
-      <span>Eco Mobile Mode</span>
+      <span>Eco Resolution Mode</span>
       <label class="switch">
         <input type="checkbox" id="optEco" />
         <span class="slider-switch"></span>
@@ -687,7 +697,7 @@
     <div class="startup-card">
       <h1>Sandevistan Optics</h1>
       <p id="startupMsg">
-        Allow camera access to track your body movements in real time with chromatic after-trails locked strictly behind you.
+        Allow camera access for full-body tracking and chromatic after-trails locked cleanly behind you.
       </p>
       <div class="startup-actions">
         <button id="startCamBtn" class="primary-cta">Activate Camera</button>
@@ -708,17 +718,18 @@
     const isLikelyMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
     const state = {
+      modelType: "multiclass", // "multiclass" (full body + clothes) | "fast"
       maxSlots: 42,
       clones: 24,
       intervalMs: 38,
       decaySec: 1.5,
       infinite: false,
-      motionPct: 12,
+      motionPct: 10,
       palette: 0,
       bgMode: 0,
       cloneOpacity: 0.90,
-      threshold: 0.54,
-      smoothRadius: 1.1,
+      threshold: 0.46,
+      smoothRadius: 1.0,
       mirror: true,
       eco: isLikelyMobile,
       facingMode: "user",
@@ -733,6 +744,7 @@
       motionLevel: 1.0,
       hasMaskHistory: false,
       histWriteIdx: 0,
+      maskRect: [0, 0, 1, 1], // [uMin, vMin, uMax, vMax] inside 256x256 padded canvas
       volume: 0.85,
       muted: false,
       fpsFrames: 0,
@@ -761,6 +773,7 @@
     const startCamBtn = document.getElementById("startCamBtn");
     const startDemoBtn = document.getElementById("startDemoBtn");
 
+    const optModel = document.getElementById("optModel");
     const optClones = document.getElementById("optClones");
     const optInterval = document.getElementById("optInterval");
     const optDecay = document.getElementById("optDecay");
@@ -820,20 +833,20 @@
     function unlockSongForMobile() {
       if (songUnlocked) return;
       songUnlocked = true;
-      const prevMuted = songAudio.muted;
       songAudio.muted = true;
-      songAudio
-        .play()
-        .then(() => {
+      const p = songAudio.play();
+      if (p !== undefined) {
+        p.then(() => {
           if (audioPhase !== "song") {
             songAudio.pause();
             songAudio.currentTime = 0;
           }
-          songAudio.muted = state.muted ? true : prevMuted;
-        })
-        .catch(() => {
+          songAudio.muted = state.muted;
+        }).catch(() => {
+          songUnlocked = false;
           songAudio.muted = state.muted;
         });
+      }
     }
 
     function startSongTrack() {
@@ -904,7 +917,6 @@
             syncAudioSettings();
             attachGestureAudioUnlock();
           } else {
-            // If activate.mp3 is unavailable/corrupt, fall through to song.mp3
             startSongTrack();
           }
         });
@@ -974,7 +986,34 @@
       gl_Position = vec4(aPos, 0.0, 1.0);
     }`;
 
-    // Mask Pass 1: Fast-attack velocity-adaptive temporal stabilization
+    // Mask Pass 1 & 2: Un-pad square mask + 3x3 Morphological Closing (Dilate -> Erode)
+    // Closes gaps inside dark clothes, arms, and hands cleanly.
+    const FS_MASK_MORPH = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uMaskIn;
+    uniform vec4 uRect;    // (uMin, vMin, uMax, vMax)
+    uniform vec2 uStep;
+    uniform float uMode;   // 0.0 = 3x3 Dilate (Max), 1.0 = 3x3 Erode (Min)
+
+    void main() {
+      vec2 baseUv = mix(uRect.xy, uRect.zw, vUv);
+      float val = uMode < 0.5 ? 0.0 : 1.0;
+
+      for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+          vec2 sUv = clamp(baseUv + vec2(float(x), float(y)) * uStep, uRect.xy, uRect.zw);
+          float s = texture(uMaskIn, sUv).r;
+          val = uMode < 0.5 ? max(val, s) : min(val, s);
+        }
+      }
+
+      fragColor = vec4(val, val, val, 1.0);
+    }`;
+
+    // Mask Pass 3: Fast-attack temporal stabilization
     const FS_MASK_TEMPORAL = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -993,16 +1032,16 @@
       float prev = texture(uPrevMask, vUv).r;
       float diff = abs(curr - prev);
 
-      // Snap immediately onto entering body parts so live silhouette never lags behind
+      // Immediate attack on body movement so live foreground never lags behind
       float speed = curr > prev
-        ? mix(0.68, 0.98, smoothstep(0.02, 0.14, diff))
-        : mix(0.30, 0.95, smoothstep(0.05, 0.22, diff));
+        ? mix(0.74, 0.99, smoothstep(0.02, 0.14, diff))
+        : mix(0.32, 0.96, smoothstep(0.05, 0.22, diff));
 
       float stabilized = mix(prev, curr, speed);
       fragColor = vec4(stabilized, stabilized, stabilized, 1.0);
     }`;
 
-    // Mask Pass 2 & 3: Separable 9-tap Gaussian blur + clean edge feathering
+    // Mask Pass 4 & 5: Separable 9-tap Gaussian blur + clean edge feathering
     const FS_MASK_BLUR = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1025,10 +1064,33 @@
       sum += texture(uMaskIn, vUv - uStep * 4.0).r * 0.0162162;
 
       if (uFinalPass > 0.5) {
-        float feather = 0.11;
+        float feather = 0.10;
         sum = smoothstep(uThresh - feather, uThresh + feather, sum);
       }
       fragColor = vec4(sum, sum, sum, 1.0);
+    }`;
+
+    // Mask Pass 6: Dilated Live Occlusion Matte (+2.5px border guard)
+    // Ensures trailing clones NEVER peek out or bleed through live edges.
+    const FS_MASK_OCC = `#version 300 es
+    precision highp float;
+    in vec2 vUv;
+    out vec4 fragColor;
+
+    uniform sampler2D uMaskIn;
+    uniform vec2 uStep;
+
+    void main() {
+      float m = texture(uMaskIn, vUv).r;
+      m = max(m, texture(uMaskIn, vUv + vec2( uStep.x, 0.0)).r);
+      m = max(m, texture(uMaskIn, vUv + vec2(-uStep.x, 0.0)).r);
+      m = max(m, texture(uMaskIn, vUv + vec2(0.0,  uStep.y)).r);
+      m = max(m, texture(uMaskIn, vUv + vec2(0.0, -uStep.y)).r);
+      m = max(m, texture(uMaskIn, vUv + vec2( uStep.x,  uStep.y) * 0.75).r);
+      m = max(m, texture(uMaskIn, vUv + vec2(-uStep.x,  uStep.y) * 0.75).r);
+      m = max(m, texture(uMaskIn, vUv + vec2( uStep.x, -uStep.y) * 0.75).r);
+      m = max(m, texture(uMaskIn, vUv + vec2(-uStep.x, -uStep.y) * 0.75).r);
+      fragColor = vec4(m, m, m, 1.0);
     }`;
 
     // Real camera background shader
@@ -1074,7 +1136,7 @@
       fragColor = vec4(vid, 1.0);
     }`;
 
-    // Cutout shader: solid core on live foreground, soft premultiplied edge for clones
+    // Cutout shader: solid opaque interior on live foreground, soft premultiplied edge on clones
     const FS_CUTOUT = `#version 300 es
     precision highp float;
     in vec2 vUv;
@@ -1096,8 +1158,7 @@
       }
 
       float rawAlpha = texture(uMaskTex, uv).r;
-      // Live foreground gets a rock-solid opaque interior (1.0) so nothing ever bleeds through
-      float alpha = uIsLive > 0.5 ? smoothstep(0.08, 0.46, rawAlpha) : rawAlpha;
+      float alpha = uIsLive > 0.5 ? smoothstep(0.04, 0.34, rawAlpha) : rawAlpha;
 
       if (alpha < 0.015) {
         fragColor = vec4(0.0);
@@ -1108,14 +1169,14 @@
       fragColor = vec4(rgb * alpha, alpha);
     }`;
 
-    // Clone spectrum shader with strict live-person occlusion (clones ALWAYS stay behind you)
+    // Clone shader: strictly occluded behind live person using dilated live occlusion matte
     const FS_CLONE = `#version 300 es
     precision highp float;
     in vec2 vUv;
     out vec4 fragColor;
 
     uniform sampler2D uCloneTex;
-    uniform sampler2D uLiveMaskTex;
+    uniform sampler2D uLiveOccTex;
     uniform vec2 uUvScale;
     uniform float uMirror;
     uniform float uAge;
@@ -1173,13 +1234,13 @@
       float a = tex.a;
       if (a < 0.015) discard;
 
-      // Occlude clone wherever the live user stands so clones NEVER overlap/cover original self
+      // Dilated live-person occlusion: clones can NEVER overlap or bleed onto live self
       vec2 liveUv = (vUv - 0.5) * uUvScale + 0.5;
       if (uMirror > 0.5) liveUv.x = 1.0 - liveUv.x;
       float liveOcclusion = 0.0;
       if (liveUv.x >= 0.0 && liveUv.x <= 1.0 && liveUv.y >= 0.0 && liveUv.y <= 1.0) {
-        float liveMask = texture(uLiveMaskTex, liveUv).r;
-        liveOcclusion = smoothstep(0.06, 0.44, liveMask);
+        float occSample = texture(uLiveOccTex, liveUv).r;
+        liveOcclusion = smoothstep(0.02, 0.24, occSample);
       }
       if (liveOcclusion >= 0.995) discard;
 
@@ -1227,11 +1288,17 @@
       return { prog, u: uniforms };
     }
 
+    const pMaskMorph = createProgram(VS_QUAD, FS_MASK_MORPH, [
+      "uMaskIn", "uRect", "uStep", "uMode"
+    ]);
     const pMaskTemporal = createProgram(VS_QUAD, FS_MASK_TEMPORAL, [
       "uCurrMask", "uPrevMask", "uHasHistory"
     ]);
     const pMaskBlur = createProgram(VS_QUAD, FS_MASK_BLUR, [
       "uMaskIn", "uStep", "uFinalPass", "uThresh"
+    ]);
+    const pMaskOcc = createProgram(VS_QUAD, FS_MASK_OCC, [
+      "uMaskIn", "uStep"
     ]);
     const pBg = createProgram(VS_QUAD, FS_BG, [
       "uVideoTex", "uUvScale", "uMirror", "uBgMode", "uHasSource"
@@ -1240,7 +1307,7 @@
       "uVideoTex", "uMaskTex", "uUvScale", "uMirror", "uIsLive"
     ]);
     const pClone = createProgram(VS_QUAD, FS_CLONE, [
-      "uCloneTex", "uLiveMaskTex", "uUvScale", "uMirror", "uAge", "uAlpha", "uPalette"
+      "uCloneTex", "uLiveOccTex", "uUvScale", "uMirror", "uAge", "uAlpha", "uPalette"
     ]);
 
     const quadVao = gl.createVertexArray();
@@ -1292,14 +1359,21 @@
     let maskFboW = 384;
     let maskFboH = 216;
     const fboPool = [];
+
+    let maskMorphA = null;
+    let maskMorphB = null;
     let maskHist = [null, null];
     let maskBlurTemp = null;
     let maskFinal = null;
+    let maskLiveOcc = null;
 
     function rebuildMaskFbos(srcW = 640, srcH = 480) {
+      destroyFbo(maskMorphA);
+      destroyFbo(maskMorphB);
       maskHist.forEach(destroyFbo);
       destroyFbo(maskBlurTemp);
       destroyFbo(maskFinal);
+      destroyFbo(maskLiveOcc);
 
       const maxMaskDim = state.eco ? 256 : 384;
       const aspect = srcW / Math.max(1, srcH);
@@ -1311,9 +1385,13 @@
         maskFboW = Math.max(96, Math.round(maxMaskDim * aspect));
       }
 
+      maskMorphA = createFbo(maskFboW, maskFboH);
+      maskMorphB = createFbo(maskFboW, maskFboH);
       maskHist = [createFbo(maskFboW, maskFboH), createFbo(maskFboW, maskFboH)];
       maskBlurTemp = createFbo(maskFboW, maskFboH);
       maskFinal = createFbo(maskFboW, maskFboH);
+      maskLiveOcc = createFbo(maskFboW, maskFboH);
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       state.hasMaskHistory = false;
     }
@@ -1378,10 +1456,14 @@
     resizeCanvas();
 
     // =========================================================================
-    // 6. Offscreen Segmentation & Demo Silhouette Canvas
+    // 6. Square Aspect-Preserving Segmentation Canvas & Demo Silhouette
     // =========================================================================
+    const SEG_SIZE = 256;
     const segCanvas = document.createElement("canvas");
+    segCanvas.width = SEG_SIZE;
+    segCanvas.height = SEG_SIZE;
     const segCtx = segCanvas.getContext("2d", { willReadFrequently: false });
+
     let maskBytes = null;
     let maskW = 0;
     let maskH = 0;
@@ -1480,50 +1562,91 @@
     }
 
     // =========================================================================
-    // 7. MediaPipe ImageSegmenter Setup
+    // 7. MediaPipe ImageSegmenter Setup (Multiclass Full-Body + Fast Fallback)
     // =========================================================================
+    let visionTasks = null;
     let imageSegmenter = null;
+    let isSwitchingModel = false;
 
-    async function initSegmenter() {
-      statusText.textContent = "LOADING NEURAL MASK...";
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
-      );
+    const MODELS = {
+      multiclass:
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite",
+      fast:
+        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite"
+    };
 
-      const modelUrl =
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
+    async function createSegmenterWithModel(modelKey) {
+      if (!visionTasks) {
+        visionTasks = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
+        );
+      }
 
+      const url = MODELS[modelKey] || MODELS.fast;
       try {
-        imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: modelUrl, delegate: "GPU" },
+        return await ImageSegmenter.createFromOptions(visionTasks, {
+          baseOptions: { modelAssetPath: url, delegate: "GPU" },
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
         });
       } catch (gpuErr) {
-        console.warn("GPU delegate unavailable, using CPU delegate:", gpuErr);
-        imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: modelUrl, delegate: "CPU" },
+        console.warn("GPU delegate failed, falling back to CPU:", gpuErr);
+        return await ImageSegmenter.createFromOptions(visionTasks, {
+          baseOptions: { modelAssetPath: url, delegate: "CPU" },
           runningMode: "VIDEO",
           outputCategoryMask: false,
           outputConfidenceMasks: true
         });
       }
+    }
+
+    async function loadSegmenter(modelKey) {
+      isSwitchingModel = true;
+      state.segmenterReady = false;
+      statusDot.className = "status-dot";
+      statusText.textContent = modelKey === "multiclass"
+        ? "LOADING FULL-BODY AI..."
+        : "LOADING FAST AI...";
+
+      const oldSeg = imageSegmenter;
+      imageSegmenter = null;
+      if (oldSeg) {
+        try { oldSeg.close(); } catch {}
+      }
+
+      try {
+        imageSegmenter = await createSegmenterWithModel(modelKey);
+        state.modelType = modelKey;
+      } catch (err) {
+        if (modelKey === "multiclass") {
+          console.warn("Multiclass failed, falling back to fast model:", err);
+          imageSegmenter = await createSegmenterWithModel("fast");
+          state.modelType = "fast";
+          optModel.value = "fast";
+        } else {
+          throw err;
+        }
+      } finally {
+        isSwitchingModel = false;
+      }
 
       state.segmenterReady = true;
+      state.hasMaskHistory = false;
+      state.prevMaskSample = null;
       updateStatusHUD();
     }
 
     function updateStatusHUD() {
-      if (!state.segmenterReady) {
+      if (isSwitchingModel || !state.segmenterReady) {
         statusDot.className = "status-dot";
-        statusText.textContent = "LOADING MODEL...";
+        statusText.textContent = "LOADING AI MODEL...";
       } else if (state.demoMode) {
         statusDot.className = "status-dot live";
         statusText.textContent = "DEMO MODE";
       } else if (state.cameraReady) {
         statusDot.className = "status-dot live";
-        statusText.textContent = "LIVE OPTICS";
+        statusText.textContent = state.modelType === "multiclass" ? "FULL-BODY LOCK" : "FAST OPTICS";
       } else {
         statusDot.className = "status-dot";
         statusText.textContent = "AWAITING CAMERA";
@@ -1590,20 +1713,44 @@
     }
 
     // =========================================================================
-    // 9. Segmentation + GPU 3-Pass Mask Refinement
+    // 9. Segmentation + GPU 6-Pass Mask Refinement Pipeline
     // =========================================================================
     function refineMaskOnGpu() {
       gl.bindVertexArray(quadVao);
       gl.disable(gl.BLEND);
       gl.viewport(0, 0, maskFboW, maskFboH);
 
+      const [uMin, vMin, uMax, vMax] = state.maskRect;
+
+      // Pass 1: Un-pad square mask + 3x3 Dilation (closes gaps in limbs/clothing)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskMorphA.fbo);
+      gl.useProgram(pMaskMorph.prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
+      gl.uniform1i(pMaskMorph.u.uMaskIn, 0);
+      gl.uniform4f(pMaskMorph.u.uRect, uMin, vMin, uMax, vMax);
+      gl.uniform2f(pMaskMorph.u.uStep, 1.0 / maskW, 1.0 / maskH);
+      gl.uniform1f(pMaskMorph.u.uMode, 0.0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // Pass 2: 3x3 Erosion (restores true silhouette boundary without reopening gaps)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskMorphB.fbo);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskMorphA.tex);
+      gl.uniform1i(pMaskMorph.u.uMaskIn, 0);
+      gl.uniform4f(pMaskMorph.u.uRect, 0.0, 0.0, 1.0, 1.0);
+      gl.uniform2f(pMaskMorph.u.uStep, 0.85 / maskFboW, 0.85 / maskFboH);
+      gl.uniform1f(pMaskMorph.u.uMode, 1.0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // Pass 3: Fast-attack temporal stabilization
       const writeIdx = state.histWriteIdx;
       const readIdx = 1 - writeIdx;
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskHist[writeIdx].fbo);
       gl.useProgram(pMaskTemporal.prog);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
+      gl.bindTexture(gl.TEXTURE_2D, maskMorphB.tex);
       gl.uniform1i(pMaskTemporal.u.uCurrMask, 0);
 
       gl.activeTexture(gl.TEXTURE1);
@@ -1615,6 +1762,7 @@
       state.hasMaskHistory = true;
       state.histWriteIdx = readIdx;
 
+      // Pass 4: Horizontal 9-tap Gaussian blur
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskBlurTemp.fbo);
       gl.useProgram(pMaskBlur.prog);
       gl.activeTexture(gl.TEXTURE0);
@@ -1625,6 +1773,7 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+      // Pass 5: Vertical 9-tap Gaussian blur + clean edge feathering -> maskFinal
       gl.bindFramebuffer(gl.FRAMEBUFFER, maskFinal.fbo);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, maskBlurTemp.tex);
@@ -1634,11 +1783,20 @@
       gl.uniform1f(pMaskBlur.u.uThresh, state.threshold);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+      // Pass 6: Dilated live occlusion matte (+2.5px border guard) -> maskLiveOcc
+      gl.bindFramebuffer(gl.FRAMEBUFFER, maskLiveOcc.fbo);
+      gl.useProgram(pMaskOcc.prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
+      gl.uniform1i(pMaskOcc.u.uMaskIn, 0);
+      gl.uniform2f(pMaskOcc.u.uStep, 2.5 / maskFboW, 2.5 / maskFboH);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     function runSegmentation(sourceEl, srcW, srcH, nowMs) {
-      if (!imageSegmenter || !state.segmenterReady) return;
+      if (!imageSegmenter || !state.segmenterReady || isSwitchingModel) return;
 
       const srcAspect = srcW / Math.max(1, srcH);
       if (Math.abs(srcAspect - lastMaskSrcAspect) > 0.02) {
@@ -1646,18 +1804,23 @@
         rebuildMaskFbos(srcW, srcH);
       }
 
-      const targetMax = state.eco ? 192 : 256;
-      const scale = targetMax / Math.max(srcW, srcH);
-      const sw = Math.max(64, Math.round(srcW * scale));
-      const sh = Math.max(64, Math.round(srcH * scale));
+      // Fit video into 256x256 square preserving true body aspect ratio (no squishing!)
+      const fitScale = SEG_SIZE / Math.max(srcW, srcH);
+      const drawW = Math.round(srcW * fitScale);
+      const drawH = Math.round(srcH * fitScale);
+      const offX = Math.floor((SEG_SIZE - drawW) / 2);
+      const offY = Math.floor((SEG_SIZE - drawH) / 2);
 
-      if (segCanvas.width !== sw || segCanvas.height !== sh) {
-        segCanvas.width = sw;
-        segCanvas.height = sh;
-        state.prevMaskSample = null;
-      }
+      state.maskRect = [
+        offX / SEG_SIZE,
+        1.0 - (offY + drawH) / SEG_SIZE,
+        (offX + drawW) / SEG_SIZE,
+        1.0 - offY / SEG_SIZE
+      ];
 
-      segCtx.drawImage(sourceEl, 0, 0, sw, sh);
+      segCtx.fillStyle = "#000000";
+      segCtx.fillRect(0, 0, SEG_SIZE, SEG_SIZE);
+      segCtx.drawImage(sourceEl, offX, offY, drawW, drawH);
 
       const ts = Math.max(state.lastSegTimestamp + 1, Math.floor(nowMs));
       state.lastSegTimestamp = ts;
@@ -1668,37 +1831,42 @@
         const masks = result.confidenceMasks;
         if (!masks || masks.length === 0) return;
 
-        const personMask = masks[masks.length - 1];
-        const floats = personMask.getAsFloat32Array();
+        // Index 0 is Background confidence for both selfie_multiclass & selfie_segmenter.
+        // Using (1.0 - backgroundConfidence) captures hair + face + skin + clothes + body as one unified person mask.
+        const bgFloats = masks[0].getAsFloat32Array();
+        const mw = masks[0].width;
+        const mh = masks[0].height;
 
-        if (!maskBytes || maskW !== personMask.width || maskH !== personMask.height) {
-          maskW = personMask.width;
-          maskH = personMask.height;
+        if (!maskBytes || maskW !== mw || maskH !== mh) {
+          maskW = mw;
+          maskH = mh;
           maskBytes = new Uint8Array(maskW * maskH);
         }
 
-        const len = floats.length;
+        const len = bgFloats.length;
         for (let i = 0; i < len; i++) {
-          const v = floats[i];
-          maskBytes[i] = v <= 0 ? 0 : v >= 1 ? 255 : (v * 255) | 0;
+          const personConf = 1.0 - bgFloats[i];
+          maskBytes[i] = personConf <= 0 ? 0 : personConf >= 1 ? 255 : (personConf * 255) | 0;
         }
 
+        // Subsampled noise-gated motion check inside active video region
         const stride = 20;
         const sampleCount = Math.ceil(len / stride);
         if (!state.prevMaskSample || state.prevMaskSample.length !== sampleCount) {
           state.prevMaskSample = new Float32Array(sampleCount);
           for (let i = 0, j = 0; i < len; i += stride, j++) {
-            state.prevMaskSample[j] = floats[i];
+            state.prevMaskSample[j] = 1.0 - bgFloats[i];
           }
           state.motionLevel = 1.0;
         } else {
           let diffSum = 0;
           for (let i = 0, j = 0; i < len; i += stride, j++) {
-            const d = Math.abs(floats[i] - state.prevMaskSample[j]);
+            const p = 1.0 - bgFloats[i];
+            const d = Math.abs(p - state.prevMaskSample[j]);
             if (d > 0.12) diffSum += d;
-            state.prevMaskSample[j] = floats[i];
+            state.prevMaskSample[j] = p;
           }
-          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 18.0);
+          state.motionLevel = Math.min(1.0, (diffSum / sampleCount) * 20.0);
         }
 
         gl.bindTexture(gl.TEXTURE_2D, maskRawTex);
@@ -1838,11 +2006,11 @@
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // 2) Render Clones Oldest -> Newest (occluded strictly behind live user)
+        // 2) Render Clones Oldest -> Newest (occluded strictly behind live user via maskLiveOcc)
         gl.useProgram(pClone.prog);
         gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, maskFinal.tex);
-        gl.uniform1i(pClone.u.uLiveMaskTex, 1);
+        gl.bindTexture(gl.TEXTURE_2D, maskLiveOcc.tex);
+        gl.uniform1i(pClone.u.uLiveOccTex, 1);
         gl.uniform2f(pClone.u.uUvScale, uvScaleX, uvScaleY);
         gl.uniform1f(pClone.u.uMirror, mirrorFlag);
         gl.uniform1i(pClone.u.uPalette, state.palette);
@@ -1877,7 +2045,7 @@
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
-        // 3) Render Solid Live Foreground Person on Top
+        // 3) Render Solid Live Foreground Person Strictly on Top
         gl.useProgram(pCutout.prog);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTex);
@@ -1919,6 +2087,16 @@
     canvas.addEventListener("click", () => {
       if (settingsPanel.classList.contains("open")) {
         setSettingsOpen(false);
+      }
+    });
+
+    optModel.addEventListener("change", async () => {
+      try {
+        await loadSegmenter(optModel.value);
+      } catch (err) {
+        console.error("Model switch error:", err);
+        statusDot.className = "status-dot error";
+        statusText.textContent = "MODEL LOAD FAILED";
       }
     });
 
@@ -2043,7 +2221,7 @@
     (async function boot() {
       requestAnimationFrame(renderFrame);
       try {
-        await initSegmenter();
+        await loadSegmenter("multiclass");
       } catch (err) {
         console.error("MediaPipe init error:", err);
         statusDot.className = "status-dot error";
